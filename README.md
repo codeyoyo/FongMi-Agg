@@ -45,7 +45,8 @@
 | | `play_probe.py` | 逐片探播放地址可用性 → `play_probe.json` |
 | `live/` | `merge_live.py` | 直播源合并去重 |
 | | `build_live_config.py` | 生成 `live_groups.json`（含实测通过线路） |
-| | `probe_all_routes.py` / `test_live_routes.py` | 直播线路测活 |
+| | `probe_all_routes.py` / `test_live_routes.py` | 直播线路测活（m3u8 主列表 → 子列表 → 分片三级校验） |
+| | `probe_hktw.py` | 港澳台频道专项实测：同名变体归并后逐线探活 |
 | `clbug/` | `fetch_clbug.py` / `probe_clbug.py` / `verify_clbug.py` | 拉源 / 测活 / 过滤验证 |
 | | `probe_clbug_live.py` / `verify_clbug_live.py` | clbug 直播源列表与分片抽样 |
 | `deploy/` | `_worker.js` | Pages advanced mode 入口，按 `?mode=` 路由 |
@@ -82,6 +83,22 @@ FongMi 的 `sites` 一条 = 一个源，App 不支持站点分组（`bean/Site.j
 `?mode=full`（全量：采集站 + js 源，旧口径）、`?mode=basic`（极简）以及各分组的 `?mode=` 入口仍可用。
 
 分组判据是**站点自身的分类名**（`pipeline/judge.py`，正规分类白名单命中 ≥8），不是猜站名：有些站名字看起来很正经，实际分类全是黑名单词，会被正确分到对应组。
+
+## 直播分组
+
+`live_groups.json` 输出四个分组：**央视 28 / 卫视 36 / 港澳台 27 / 其他 336**。
+
+港澳台分组的两个坑（都实际踩过）：
+
+1. **噪声匹配**：池里「凤凰传奇」「星空传媒」「香港三级」「X战警：黑凤凰」都会命中频道关键词，
+   必须白名单 + 黑名单双筛，光靠关键词会混进一堆影视条目。
+2. **同名变体**：「凤凰资讯」「凤凰资讯频标」「鳳凰衛視資訊台」「凤凰资讯 (720p)」是同一个频道；
+   「翡翠」「无线翡翠」「TVB翡翠台 1080P」也是。归并键要先去括号/频标/分辨率后缀、
+   做繁简转换，再去掉「无线」前缀后比对——但展示名要挑完整那个，
+   否则频道名会只剩「新闻」。
+
+港澳台线路少（很多源只挂 1–2 条），所以这一组不套用「线路数 ≥3 才收录」的规则；
+实测全死的频道直接不下发，共 67 个候选筛出 27 个。
 
 ## 日常命令
 
