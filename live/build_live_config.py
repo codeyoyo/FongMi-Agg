@@ -142,7 +142,7 @@ def canon(name):
 
 def pick_channels(merged, tested):
     """返回 {分组名: [Channel, ...]}"""
-    groups = {'央视': [], '卫视': [], '港澳台': [], '其他': []}
+    groups = {'央视': [], '卫视': [], '港澳台': [], '国际': [], '其他': []}
     tested_urls = {}
     for k, v in (tested or {}).items():
         tested_urls[k] = set(v.get('routes') or [])
@@ -273,6 +273,32 @@ def pick_channels(merged, tested):
         if ch:
             groups['其他'].append(ch)
 
+    # 国际：来自 intl_channels.json（iptv-org 的 sg/jp/kr 已实测通过的频道）
+    intl_p = os.path.join(BASE, 'intl_channels.json')
+    if os.path.exists(intl_p):
+        try:
+            intl = json.load(open(intl_p))
+        except Exception:
+            intl = []
+        CC_NAME = {'sg': '新加坡', 'jp': '日本', 'kr': '韩国', 'us': '美国', 'gb': '英国'}
+        by_name = {}
+        for x in intl:
+            nm = x['name']
+            by_name.setdefault(nm, []).append(x)
+        # 新闻/国际台优先，其余按国别
+        PRIORITY = ('CNA', 'Arirang', 'NHK', 'KBS', 'MBC', 'SBS', 'Weathernews', 'Channel 5',
+                    'Channel 8', 'Channel U')
+        def intl_rank(nm):
+            for i, w in enumerate(PRIORITY):
+                if w.lower() in nm.lower():
+                    return i
+            return 99
+        for nm, xs in sorted(by_name.items(), key=lambda kv: (intl_rank(kv[0]), kv[0])):
+            urls = []
+            for x in xs[:3]:
+                urls.append('%s$%s' % (x['url'], CC_NAME.get(x['cc'], x['cc'].upper())))
+            groups['国际'].append({'name': nm, 'urls': urls})
+
     return groups
 
 
@@ -323,7 +349,7 @@ if __name__ == '__main__':
 
     groups = pick_channels(merged, tested)
     total = sum(len(v) for v in groups.values())
-    print(f'央视 {len(groups["央视"])} | 卫视 {len(groups["卫视"])} | 港澳台 {len(groups["港澳台"])} | 其他 {len(groups["其他"])} → 共 {total}')
+    print(f'央视 {len(groups["央视"])} | 卫视 {len(groups["卫视"])} | 港澳台 {len(groups["港澳台"])} | 国际 {len(groups["国际"])} | 其他 {len(groups["其他"])} → 共 {total}')
     for gname, chs in groups.items():
         for c in chs[:6]:
             print(f'  [{gname}] {c["name"]:18} {len(c["urls"])} 线路  首条来源标签={c["urls"][0].split("$")[-1]}')
