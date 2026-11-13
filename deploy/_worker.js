@@ -165,7 +165,7 @@ async function pull(src, query, ms) {
 async function lineOk(url) {
   if (!/^https?:\/\//.test(String(url || ''))) return false;
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 2000);
+  const timer = setTimeout(() => ctl.abort(), 1500);
   try {
     const res = await fetch(url, {
       signal: ctl.signal,
@@ -444,18 +444,16 @@ async function handleDetail(g, ids) {
         seenFrom.add(l.from);
         uniqLines.push(l);
       }
-      // 只探前 4 条：够用户切了，全探会把详情拖到十秒
-      const head = uniqLines.slice(0, 4);
-      const tail = uniqLines.slice(4).map((l) => ({ ...l, ok: false }));
+      // 全部线路都探活：实测 11 条里能混 3 条死链，用户没有义务挨个试。
+      // 死的不返回，只在全死时保留首条兜底（总比详情空白强）。
       const checks = await runBatched(
-        head.map((l) => async () => {
+        uniqLines.map((l) => async () => {
           const first = String(l.url).split('#')[0].split('$').pop();
           return { ...l, ok: await lineOk(first) };
         })
       );
       const good = checks.filter((x) => x.ok);
-      const bad = checks.filter((x) => !x.ok);
-      return { it, i, lines: good.concat(bad).concat(tail) };
+      return { it, i, lines: good.length ? good : uniqLines.slice(0, 1) };
     })
   );
 
