@@ -15,7 +15,7 @@
 
 const TIMEOUT_MS = 4000;
 const SEARCH_MS = 2500;   // 详情页并线路时的搜索超时，宁可少一条线路也不要卡十几秒
-const BATCH = 6;
+const BATCH = 10;   // CF 单请求允许 50 个 subrequest，同时开连接约 6 条，10 只是更快填满
 const CACHE_SECONDS = 300;
 const UA = 'Mozilla/5.0 (Linux; Android 12)';
 
