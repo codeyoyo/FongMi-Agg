@@ -81,6 +81,12 @@ echo "--- [7b] 生成 adult.json / other.json"
 python3 pipeline/judge.py >/dev/null 2>&1 && python3 builders/build_groups.py \
   || echo "  !! 分组生成失败，沿用上一版 adult/other"
 
+# 7bb) 播放实测：每源抽 4 部片走「详情 → 首集地址 → 校验 #EXTM3U」
+#      产出 play_probe.json，是 7c 优选的门槛依据；失败则沿用上一版
+echo "--- [7bb] 播放实测（优选依据）"
+python3 builders/play_probe.py >/dev/null 2>&1 \
+  || echo "  !! 播放实测失败，沿用上一版 play_probe.json"
+
 # 7c) 两组聚合站点：服务端把同一组的几十个源合成一个 type:1 站点
 #     two.json 的 sites 只有两条（影视资源 / 成人资源），配置本体 200KB 级
 echo "--- [7c] 生成聚合站点 two.json + agg_srcs.json"

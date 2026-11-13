@@ -172,12 +172,16 @@ def main():
                 r['_q'] = quality.get(r['name'], {})
             # 优选门槛：4 条样本里至少一半能真播。只要求"有 1 条能播"太松——
             # 实测有 4 个源是 1/4，等于用户点四部片三部落空
-            good = [r for r in srcs if r['_q'].get('rate', 0) >= 0.5]
+            # 注意区分「测过不合格」和「本轮没测到」：新源没数据时 rate 也是 0，
+            # 若一并剔除，新源永远进不来
+            measured = [r for r in srcs if r['name'] in quality]
+            fresh = [r for r in srcs if r['name'] not in quality]
+            good = [r for r in measured if r['_q'].get('rate', 0) >= 0.5]
             if len(good) < 6:                      # 太少了才放宽到"至少 1 个能播"
-                good = [r for r in srcs if r['_q'].get('play', 0) >= 1]
+                good = [r for r in measured if r['_q'].get('play', 0) >= 1]
             if len(good) >= 3:
-                srcs = good
-            print(f'  优选后 {grp}: {len(srcs)} 源（rate≥0.5 门槛）')
+                srcs = good + fresh                # 未测的留着，排后面等下轮实测
+            print(f'  优选后 {grp}: {len(srcs)} 源（合格 {len(good)} + 未测 {len(fresh)}）')
         srcs.sort(key=lambda x: (-x.get('_q', {}).get('rate', 0), -int(x.get('_total') or 0)))
         # 先列候选，再并发探测：串行探测 200+ 次会让这一步跑上十分钟
         cands = []
