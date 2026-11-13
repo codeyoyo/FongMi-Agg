@@ -10,7 +10,7 @@
 标准分类桶把各源五花八门的 tid 对齐，App 里只看到 6 个分类，
 每个分类背后是 N 个源合并。
 """
-import json, os, re, urllib.request
+import json, os, re, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,20 +25,24 @@ BUCKETS = [
     ('动漫', ['动漫', '动画']),
     ('纪录片', ['纪录']),
 ]
-MAX_SRC_PER_BUCKET = 12   # Cloudflare 每请求 subrequest 上限 50，留足余量
+# 站内分类名里出现这些词的，一律不进「影视资源」组
+# （实测爱蛋「福利视频」、优质资源库「福利」就是成人分类，混进去等于漏过滤）
+ADULT_KWS = ('福利', '情色', '伦理', '写真', '无码', '三级', '自拍', '主播',
+             '抖阴', '偷拍', '人妻', '激情', '约炮', '里番', '丝袜', '成人')
+
+MAX_SRC_PER_BUCKET = 18   # Cloudflare 每请求 subrequest 上限 50，留足余量
 
 
-def fetch_classes(site):
-    api, typ = str(site.get('api') or ''), site.get('type')
-    sep = '&' if '?' in api else '?'
-    url = api + sep + ('ac=list&at=xml' if typ == 0 else 'ac=list')
+def _get(url):
     try:
         req = urllib.request.Request(url, headers=UA)
         with urllib.request.urlopen(req, timeout=12) as r:
-            body = r.read(300000).decode('utf-8', 'ignore')
-    except Exception as e:
-        return {**site, '_cls': [], '_cerr': type(e).__name__}
+            return r.read(300000).decode('utf-8', 'ignore')
+    except Exception:
+        return None
 
+
+def _parse_classes(body, typ):
     pairs = []
     if typ == 0:
         seg = re.search(r'<class>(.*?)</class>', body, re.S)
@@ -48,11 +52,77 @@ def fetch_classes(site):
     else:
         try:
             j = json.loads(body)
-            for c in (j.get('class') or []):
-                pairs.append((str(c.get('type_id')), str(c.get('type_name') or '')))
-        except Exception as e:
-            return {**site, '_cls': [], '_cerr': 'json:' + type(e).__name__}
-    return {**site, '_cls': pairs[:80]}
+        except Exception:
+            return pairs
+        for c in (j.get('class') or []):
+            pairs.append((str(c.get('type_id')), str(c.get('type_name') or '')))
+    return pairs
+
+
+CACHE_FILE = os.path.join(DIST, 'classes_cache.json')
+CACHE_TTL = 7 * 86400          # 站点分类表一周内基本不变
+_cache = {}
+
+
+def load_cache():
+    global _cache
+    try:
+        _cache = json.load(open(CACHE_FILE))
+    except Exception:
+        _cache = {}
+
+
+def save_cache():
+    try:
+        json.dump(_cache, open(CACHE_FILE, 'w'), ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def fetch_classes(site):
+    api, typ = str(site.get('api') or ''), site.get('type')
+    ent = _cache.get(api)
+    if ent and ent.get('c') and time.time() - ent.get('t', 0) < CACHE_TTL:
+        return {**site, '_cls': [(str(a), str(b)) for a, b in ent['c']], '_via': 'cache'}
+    # FongMi 取分类表走的是「无参数 GET api」（见 SiteApi.homeContent）；
+    # 只有部分站才认 ac=list。两个形态都试，且各重试一次（这些站抖动很大）。
+    sep = '&' if '?' in api else '?'
+    for url in (api, api + sep + ('ac=list&at=xml' if typ == 0 else 'ac=list')):
+        for _ in range(2):
+            body = _get(url)
+            if not body:
+                continue
+            pairs = _parse_classes(body, typ)
+            if pairs:
+                _cache[api] = {'t': time.time(), 'c': pairs[:80]}
+                return {**site, '_cls': pairs[:80], '_via': 'bare' if url == api else 'ac=list'}
+    ent = _cache.get(api)
+    if ent and ent.get('c'):        # 抓不到就退回过期缓存，别让源凭空消失
+        return {**site, '_cls': [(str(a), str(b)) for a, b in ent['c']], '_via': 'stale'}
+    return {**site, '_cls': [], '_cerr': 'no class'}
+
+
+def _count(url, typ):
+    body = _get(url)
+    if not body:
+        return 0
+    if typ == 0 or body.lstrip().startswith('<'):
+        return len(re.findall(r'<video>', body))
+    try:
+        return len(json.loads(body).get('list') or [])
+    except Exception:
+        return 0
+
+
+def probe_tid(site, tid):
+    """返回该源对某个 tid 的可用形态：'t' 表示 t= 生效，'all' 表示只能拉全量后本地过滤"""
+    api, typ = str(site.get('api') or ''), site.get('type')
+    sep = '&' if '?' in api else '?'
+    tail = '&at=xml' if typ == 0 else ''
+    q = 'ac=videolist&t=%s&pg=1' % tid
+    if _count(api + sep + q + tail, typ) > 0:
+        return 't'
+    return 'all'
 
 
 def bucket_of(name):
@@ -64,6 +134,7 @@ def bucket_of(name):
 
 
 def main():
+    load_cache()
     kinds = json.load(open(os.path.join(BASE, 'kinds2.json')))
     with ThreadPoolExecutor(max_workers=8) as ex:
         rows = list(ex.map(fetch_classes, kinds))
@@ -85,17 +156,19 @@ def main():
         if quality:
             for r in srcs:
                 r['_q'] = quality.get(r['name'], {})
-            good = [r for r in srcs if r['_q'].get('play', 0) >= 2]
+            good = [r for r in srcs if r['_q'].get('play', 0) >= 1]
             if len(good) < 4:                      # 太少了就放宽到"至少 1 个能播"
                 good = [r for r in srcs if r['_q'].get('play', 0) >= 1]
             if len(good) >= 3:
                 srcs = good
         srcs.sort(key=lambda x: (-x.get('_q', {}).get('rate', 0), -int(x.get('_total') or 0)))
-        buckets, used = {}, {}
+        buckets, used, modes = {}, {}, {}
         for r in srcs:
             # 每个源在每个桶最多贡献 1 个 tid
             seen = set()
             for tid, cname in r['_cls']:
+                if grp == 'other' and any(k in cname for k in ADULT_KWS):
+                    continue
                 b = bucket_of(cname)
                 if b in seen:
                     continue
@@ -103,16 +176,24 @@ def main():
                 if used.get(b, 0) >= MAX_SRC_PER_BUCKET:
                     continue
                 used[b] = used.get(b, 0) + 1
+                mode = probe_tid(r, tid)
+                q = ('ac=videolist&t=%s&pg={pg}' % tid) if mode == 't' else 'ac=videolist&pg={pg}'
+                md = modes.setdefault(b, {}).setdefault(mode, 0)
+                modes[b][mode] = md + 1
                 buckets.setdefault(b, []).append({
                     'name': r['name'], 'api': r['api'], 'type': r['type'],
                     'tid': tid, 'cname': cname, 'total': int(r.get('_total') or 0),
+                    'q': q,
                 })
         order = ['电影', '电视剧', '综艺', '动漫', '纪录片', '其它']
         bl = [{'name': b, 'srcs': buckets[b]} for b in order if buckets.get(b)]
         out[grp] = {'buckets': bl}
         print(f'{grp}: {len(srcs)} 源 → ' +
               ', '.join(f"{b['name']}{len(b['srcs'])}" for b in bl))
+        for b, m in modes.items():
+            print(f'   {b}: 认 t {m.get("t", 0)} 源 / 只能全量 {m.get("all", 0)} 源')
 
+    save_cache()
     json.dump(out, open(os.path.join(DIST, 'agg_srcs.json'), 'w'), ensure_ascii=False)
     print('→ dist2/agg_srcs.json', os.path.getsize(os.path.join(DIST, 'agg_srcs.json')), 'B')
 

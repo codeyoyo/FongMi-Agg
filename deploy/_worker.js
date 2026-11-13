@@ -13,7 +13,7 @@
 //
 // 旧入口保留：/fongmi.json 默认 clean，?mode=other|adult|full|basic
 
-const TIMEOUT_MS = 6000;
+const TIMEOUT_MS = 4000;
 const BATCH = 6;
 const CACHE_SECONDS = 300;
 const UA = 'Mozilla/5.0 (Linux; Android 12)';
@@ -96,6 +96,28 @@ function parseXmlVideos(body) {
       const r = new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)<\\/' + tag + '>').exec(seg);
       return r ? txt(r[1]) : '';
     };
+    // XML 站的播放地址在 <dl><dd flag="线路名">名$地址#名$地址</dd></dl> 里，
+    // 不是 JSON 风格的 <vod_play_url>；不解析这里，所有 type=0 站点的播放都是空的。
+    let xFrom = '';
+    let xUrl = '';
+    const dl = /<dl>([\s\S]*?)<\/dl>/.exec(seg);
+    if (dl) {
+      const fs = [];
+      const us = [];
+      const reDd = /<dd([^>]*)>([\s\S]*?)<\/dd>/g;
+      let d;
+      let n = 0;
+      while ((d = reDd.exec(dl[1]))) {
+        const body = txt(d[2]);
+        if (!body) continue;
+        const fm = /flag="([^"]*)"/.exec(d[1]);
+        n += 1;
+        fs.push((fm && fm[1].trim()) || '线路' + n);
+        us.push(body);
+      }
+      xFrom = fs.join('$$$');
+      xUrl = us.join('$$$');
+    }
     out.push({
       vod_id: get('id'),
       vod_name: get('name'),
@@ -107,8 +129,8 @@ function parseXmlVideos(body) {
       vod_director: get('director'),
       type_name: get('type'),
       vod_content: get('des'),
-      vod_play_from: '',
-      vod_play_url: '',
+      vod_play_from: xFrom,
+      vod_play_url: xUrl,
     });
   }
   return out;
@@ -281,13 +303,23 @@ function mergeList(items, idx) {
 }
 
 async function handleCategory(g, bucketName, pg) {
-  const srcs = uniqueSrcs(g);
-  const wantAll = bucketName === '全部';
+  const all = uniqueSrcs(g);
+  // vod_id 里的 s<idx> 靠 uniqueSrcs 的顺序还原，所以全局下标必须由它决定
+  const idxOf = new Map();
+  all.forEach((s, i) => idxOf.set(s.api, i));
 
-  const tasks = srcs.map((src, idx) => async () => {
+  const wantAll = bucketName === '全部';
+  const bucket = wantAll ? null : (g.buckets || []).find((b) => b.name === bucketName);
+  // 分类聚合的正确姿势：每个源用它自己站点里这个分类的 tid 去拉，
+  // 而不是拉站点首页再本地过滤（一页 20 条里常常只有 2-3 条属于该分类）
+  const srcs = bucket ? bucket.srcs : all;
+
+  const tasks = srcs.map((src) => async () => {
     const t0 = Date.now();
-    // 不带 t：多数采集站根本没有分类表接口（ac=list 直接吐列表），t 参数不可靠
-    const r = await pull(src, `ac=videolist&pg=${pg}`);
+    const idx = idxOf.has(src.api) ? idxOf.get(src.api) : -1;
+    // 构建期已探测过每个源在这类目下认不认 t=，直接用记好的模板，运行时零试错
+    const q = !wantAll && src.q ? String(src.q).replace('{pg}', pg) : `ac=videolist&pg=${pg}`;
+    const r = await pull(src, q);
     if (!r) {
       STATS.push({ i: idx, n: -1, ms: Date.now() - t0, name: src.name });
       return null;
@@ -296,23 +328,27 @@ async function handleCategory(g, bucketName, pg) {
     let pc = 1;
     if (r.kind === 'xml') {
       items = parseXmlVideos(r.body);
-      pc = 999;
+      pc = 1;
     } else {
       items = Array.isArray(r.data && r.data.list) ? r.data.list : [];
       const total = Number(r.data && r.data.total) || 0;
       pc = Number(r.data && r.data.pagecount) || (total ? Math.ceil(total / 20) : 1);
     }
-    const hit = wantAll ? items : items.filter((it) => bucketOf(it.type_name) === bucketName);
-    STATS.push({ i: idx, n: items.length, hit: hit.length, ms: Date.now() - t0, name: src.name, pc });
-    return { idx, items: hit, pagecount: pc };
+    let final = items;
+    if (!wantAll) {
+      const byType = items.filter((it) => bucketOf(it.type_name) === bucketName);
+      // 站内 tid 生效时结果本就该全是该类；过滤后为空说明它忽略了 t，退回原列表
+      final = src.tid && byType.length === 0 ? items : byType;
+    }
+    STATS.push({ i: idx, n: items.length, hit: final.length, ms: Date.now() - t0, name: src.name, tid: src.tid || null, pc });
+    return { idx, items: final, pagecount: pc };
   });
 
   const results = await runBatched(tasks);
   const stats = STATS.splice(0, STATS.length);
-  let pagecount = 1;
-  for (const r of results) {
-    if (r && r.pagecount) pagecount = Math.max(pagecount, r.pagecount);
-  }
+  // 各源自报的页数差异极大（几十到上万），取中位数，别让单个站把总页数顶到 6000
+  const pcs = results.filter((r) => r && r.pagecount > 0).map((r) => r.pagecount).sort((a, b) => a - b);
+  const pagecount = pcs.length ? pcs[Math.floor(pcs.length / 2)] : 1;
   const items = interleave(results.map((r) => (r ? { idx: r.idx, items: r.items || [] } : null)));
   const body = { list: items, page: pg, pagecount, limit: items.length, total: pagecount * items.length };
   if (new URL(globalThis.__requrl || 'http://x').searchParams.get('debug')) body.debug = stats;
@@ -347,29 +383,37 @@ async function handleDetail(g, ids) {
   }
   if (!primary.length) return json({ list: [] });
 
-  // 2) 同一部片去其他源找同名，把它们的播放线路并成一排
-  //    单条线路挂了还能换，这是"聚合"真正该给的东西
+  // 2) 同一部片去其他源找同名，把它们的播放线路并成一排。
+  //    单条线路挂了还能换，这才是"聚合"该给的东西。
+  //    不能用"前 N 个源"抽样：排在前面的源可能整批不支持搜索，
+  //    实测就因此把 15 条线路缩成 1 条。改成全量搜索 + 只对命中源拉详情。
   const extras = await Promise.all(
     primary.map(async (it) => {
       const name = String(it.vod_name || '').trim();
       if (!name) return [];
-      const others = all
-        .map((s, i) => ({ s, i }))
-        .filter(({ i }) => i !== it._idx)
-        .slice(0, 4); // 最多再找 4 个源，控制时延
-      const got = await runBatched(
+      const others = all.map((s, i) => ({ s, i })).filter(({ i }) => i !== it._idx);
+
+      // 阶段一：并发搜索，只留真正命中同名的
+      const hits = await runBatched(
         others.map(({ s, i }) => async () => {
           const r = await pull(s, `wd=${encodeURIComponent(name)}&ac=videolist&pg=1`);
           if (!r) return null;
           const items = r.kind === 'xml' ? parseXmlVideos(r.body) : (r.data && r.data.list) || [];
           const hit = items.find((x) => String(x.vod_name || '').trim() === name);
-          if (!hit) return null;
-          const d = await pull(s, `ac=detail&ids=${encodeURIComponent(hit.vod_id)}`);
+          return hit ? { s, vid: hit.vod_id } : null;
+        })
+      );
+
+      // 阶段二：只对命中的源拉详情取 play_url
+      const valid = hits.filter(Boolean);
+      const got = await runBatched(
+        valid.map((h) => async () => {
+          const d = await pull(h.s, `ac=detail&ids=${encodeURIComponent(h.vid)}`);
           if (!d) return null;
           const dl = d.kind === 'xml' ? parseXmlVideos(d.body) : (d.data && d.data.list) || [];
           const one = dl[0];
           if (!one || !one.vod_play_url) return null;
-          return { from: String(one.vod_play_from || s.name).trim() || s.name, url: one.vod_play_url };
+          return { from: String(one.vod_play_from || h.s.name).trim() || h.s.name, url: one.vod_play_url };
         })
       );
       return got.filter(Boolean);
@@ -443,8 +487,8 @@ export default {
     const path = url.pathname;
 
     if (path === '/fongmi.json' || path === '/') {
-      const mode = (url.searchParams.get('mode') || 'clean').toLowerCase();
-      const target = MODE_MAP[mode] || '/clean.json';
+      const mode = (url.searchParams.get('mode') || 'two').toLowerCase();
+      const target = MODE_MAP[mode] || '/two.json';
       const res = await env.ASSETS.fetch(new URL(target, url.origin));
       if (!res.ok) return json({ error: 'config missing', target }, 500);
       return new Response(await res.text(), {
@@ -452,7 +496,7 @@ export default {
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-cache, must-revalidate',
           'access-control-allow-origin': '*',
-          'x-config-mode': MODE_MAP[mode] ? mode : 'clean',
+          'x-config-mode': MODE_MAP[mode] ? mode : 'two',
         },
       });
     }
@@ -502,11 +546,17 @@ export default {
 
       const ac = (url.searchParams.get('ac') || '').toLowerCase();
       const wd = url.searchParams.get('wd');
+      const ids = url.searchParams.get('ids') || '';
       const pg = Math.max(1, parseInt(url.searchParams.get('pg') || '1', 10) || 1);
 
+      // FongMi 对 type=1 站点的真实调用（app/.../api/SiteApi.java）：
+      //   首页      GET api                    —— 无任何参数，期望分类表
+      //   分类列表  ac=detail&t=<分类>&pg=<页>  —— 注意 ac 就是 detail，且没有 ids
+      //   详情      ac=detail&ids=<id>
+      //   搜索      wd=&quick=&extend=          —— 没有 ac
+      // 所以形态只能靠 ids / t / wd 判定；用 ac 当主依据会把分类请求吞成空详情。
       if (wd) return handleSearch(g, wd, pg);
-      if (ac === 'list') return handleList(g);
-      if (ac === 'detail') return handleDetail(g, url.searchParams.get('ids') || '');
+      if (ids) return handleDetail(g, ids);
       const t = url.searchParams.get('t');
       if (t) return handleCategory(g, t, pg);
       return handleList(g);

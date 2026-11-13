@@ -2,7 +2,7 @@
 """build_two.py —— 生成"只有两个站点"的配置 two.json
 
 sites 里就两条：
-  其它      → /other   （42 个正经采集站，按分类桶在服务端聚合）
+  影视资源  → /other   （正经采集站，按分类桶在服务端聚合）
   成人资源  → /adult   （25 个成人采集站，同）
 
 两条都是 type:1（纯 HTTP 采集协议），FongMi 原生支持，设备端零依赖。
@@ -33,7 +33,7 @@ def site(key, name, path):
 
 cfg = {
     'sites': [
-        site('agg_other', '其它', '/other'),
+        site('agg_other', '影视资源', '/other'),
         site('agg_adult', '成人资源', '/adult'),
     ],
     'lives': LIVES,

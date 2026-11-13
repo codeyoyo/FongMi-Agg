@@ -61,8 +61,13 @@
 **主入口：只有两个组**
 
 ```
-https://fm.le138.de5.net/fongmi.json        → sites 里就两条：其它 / 成人资源
+https://fm.le138.de5.net/fongmi.json   → sites 里就两条：影视资源 / 成人资源
 ```
+
+- `影视资源` → `/other`：18 个正经采集站聚合，站内分类名命中成人词的条目已剔除
+- `成人资源` → `/adult`：20 个成人采集站聚合
+
+两条都是 `type: 1`，设备端零依赖。**不是两份配置靠 URL 参数切换**——那正是之前被否掉的做法。
 
 FongMi 的 `sites` 一条 = 一个源，App 不支持站点分组（`bean/Site.java` 无 group 字段）。所以"两组"的实现方式是把聚合搬到服务端：两条 `type:1` 站点分别指向 `/other` 和 `/adult`，Worker 内部把同组的几十个采集站并发拉取、去重、轮询交错成一个列表。
 
@@ -99,6 +104,8 @@ bash scripts/daily_update.sh --no-deploy
 # 单步
 python3 pipeline/probe_api.py <站点列表.json>       # 测活 → ok_api.json
 python3 pipeline/classify_sites.py ok_api_final.json # 分类 → sites_clean.json
+python3 builders/build_agg.py                        # 探测各源分类约定 → dist2/agg_srcs.json
+python3 builders/build_two.py                        # 生成 → dist2/two.json（两条站点）
 python3 builders/build_modes.py                      # 生成 → dist2/clean.json + full.json
 bash scripts/deploy_pages.sh                         # 部署
 
@@ -107,6 +114,22 @@ bash scripts/daily_clbug.sh
 ```
 
 > `daily_update.sh` 用 bash 语法（`exec > >(tee ...)`），**必须用 `bash` 跑，不能用 `sh`**（本机 `sh` 是 dash）。其余脚本 sh/bash 均可。
+
+## 聚合与优选是怎么做的
+
+不是把 N 个源简单拼起来，四件事都在做：
+
+1. **按站内分类拉取**。`builders/build_agg.py` 在构建期逐源探测「这个站认不认分类参数 `t=`」，
+   把结果写成 `q` 模板存进 `agg_srcs.json`。运行时直接按记好的形态发请求，零试错。
+   实测 18 个源里只有 3–4 个认 `t=`，其余只能拉全量再本地按 `type_name` 过滤。
+2. **交错去重**。各源列表按轮询交错（`interleave`），避免被片库最大的站整页淹没；
+   同名按 `vod_name` 去重。
+3. **详情多线路**。`handleDetail` 拿全组所有源搜同名影片，命中后取各自 `vod_play_url`，
+   用 `$$$` 拼成一排线路——一条挂了还能换。实测《谷雨》能并到 11 条线路。
+   （这里踩过坑：早期只抽前 4 个源，恰好那 4 个商店全都不支持搜索，15 条线路缩成 1 条。）
+4. **成人过滤**。除站名关键词与内容抽样外，`build_agg` 还会剔掉站内分类名命中
+   `福利/情色/伦理/写真/无码/自拍/主播` 等词的分支——实测爱蛋「福利视频」、
+   优质资源库「福利」就是成人分类，不剔会漏进影视资源组。
 
 ## 为什么要做过滤
 
@@ -150,6 +173,23 @@ bash scripts/deploy_pages.sh
 | L3 | `ac=videolist&ids=` 详情拿得到 | 能进到播放页 |
 
 之前踩过的坑：**只测到 L2 会误判**。同一个站常同时提供 JSON 和 XML 两个入口，XML 那个可能列表接口是坏的，但片库数报得更大 —— 按片库量去重就会保留坏的那个。所以去重规则是 **type1(JSON) 绝对优先**，不管片库数。
+
+## 对接 FongMi 的真实协议
+
+参数取自 `FongMi/TV` 的 `app/src/main/java/com/fongmi/android/tv/api/SiteApi.java`，
+自测时**必须**照这四种形态发，否则测的就不是 App 会走的路：
+
+| 场景 | 请求 | 期望 |
+| --- | --- | --- |
+| 首页/分类表 | `GET /other`（无任何参数） | `{"class":[...]}` |
+| 分类列表 | `GET /other?ac=detail&t=电影&pg=1` | `{"list":[...]}` |
+| 详情 | `GET /other?ac=detail&ids=s1\|149716` | `{"list":[{…vod_play_url}]}` |
+| 搜索 | `GET /other?wd=斗罗&quick=true&extend=` | `{"list":[...]}` |
+
+容易写错的两点：type=1 站点的分类请求 `ac` 就是 `detail`（`ac()` 只在 type=0 时返回 `videolist`），
+且**没有 ids**；搜索请求**不带 ac**。曾因为按 `ac==='detail'` 判详情，把分类请求全吞成空列表。
+
+一键回归：`python3 scripts/verify_agg.py https://fm.le138.de5.net other`
 
 ## 已知局限
 
