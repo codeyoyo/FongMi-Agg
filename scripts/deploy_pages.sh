@@ -5,7 +5,7 @@
 #
 # 凭据：优先环境变量，否则读 /app/working/instabox-keepalive/.cf_token
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 export CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN:-$(cat /app/working/instabox-keepalive/.cf_token 2>/dev/null | tr -d '\n\r ')}"
 # 账号 ID 不写死在仓库里：优先环境变量，其次同目录 .cf_account（已被 .gitignore 排除）

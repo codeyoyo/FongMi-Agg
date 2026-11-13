@@ -73,7 +73,7 @@ def deploy(token, acct, name, directory):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--project', default='fongmi')
-    ap.add_argument('--dir', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist'))
+    ap.add_argument('--dir', default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dist'))
     args = ap.parse_args()
 
     token = os.environ.get('CF_API_TOKEN') or ''

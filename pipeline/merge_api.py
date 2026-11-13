@@ -2,7 +2,7 @@
 """merge_api.py —— 把实测采集站合并进订阅，生成精简版和完整版"""
 import json, os, shutil
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
 api = json.load(open(os.path.join(BASE, 'ok_api_final.json')))
 base_cfg = json.load(open(os.path.join(DIST, 'fongmi.json')))

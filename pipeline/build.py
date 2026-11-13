@@ -11,7 +11,7 @@ import argparse, concurrent.futures as cf, json, os, re, ssl, sys, time
 import urllib.request
 from urllib.parse import urljoin
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist')
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36'}
 CTX = ssl.create_default_context(); CTX.check_hostname = False; CTX.verify_mode = ssl.CERT_NONE

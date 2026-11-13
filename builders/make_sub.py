@@ -11,7 +11,7 @@
 """
 import json, os, re, shutil, sys
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
 JS_SRC = os.environ.get('JS_CACHE') or os.path.join(BASE, 'drpy', 'jscache2')
 RESULT = os.environ.get('RESULT_JSON') or os.path.join(BASE, 'drpy', 'out3', 'result.json')

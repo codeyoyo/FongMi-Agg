@@ -1,53 +1,116 @@
 # FongMi 订阅聚合
 
-从公开仓库收集 TVBox/FongMi 采集站 → 测活 → 内容分类 → 生成两版订阅 → 部署到 Cloudflare Workers。
+从公开仓库收集 TVBox/FongMi 采集站 → 测活 → 内容分类 → 分组聚合 → 生成订阅 → 部署到 Cloudflare Pages。
+
+## 目录结构
+
+```
+.
+├── scripts/      入口脚本（所有能直接跑的东西都在这）
+├── pipeline/     采集链路：拉源 → 测活 → 去重 → 分类 → 三层验证
+├── builders/     生成器：订阅文件、两组配置、聚合站点
+├── live/         直播源聚合与线路测活
+├── clbug/        tvbox.clbug.com 源线（独立实验链路，可单独跑）
+├── deploy/       部署：Pages / Workers / _worker.js
+├── prototype/    早期预研代码（不参与主流程）
+├── docs/         说明与留档
+├── dist/         中间产物：站点列表、js 源清单
+├── dist2/        最终发布目录（Pages 上传的就是这个）
+├── backup/       历史配置备份
+└── logs/         每日运行日志，保留 14 天
+```
+
+| 目录 | 文件 | 作用 |
+|---|---|---|
+| `scripts/` | `daily_update.sh` | 每日全流程（8 步），生产入口 |
+| | `run.sh` | js 源链路：采集 → node 测活 → 组装 → 发布 |
+| | `daily_clbug.sh` | clbug 源刷新（5 步） |
+| | `finalize_live.sh` | 直播实测数据齐了后重建并部署 |
+| | `deploy_pages.sh` | 部署到 Cloudflare Pages（当前主用） |
+| | `deploy_worker.sh` | 部署到 Cloudflare Workers（备选形态） |
+| `pipeline/` | `build.py` | 拉取上游配置源，拆出采集站 / js 源 → `dist/` |
+| | `probe_api.py` | 采集站测活（JSON `list` 非空 / XML `<video>` 非空） |
+| | `merge_api.py` | 合并测活结果去重 |
+| | `classify_sites.py` | 内容分类：站名关键词 + 首 20 条抽样命中率 |
+| | `probe_classes.py` | 抓各站自己的分类表 → `classes_all.json` |
+| | `judge.py` | 按**站内分类名**判定成人/其它 → `kinds2.json` |
+| | `classify_all.py` | 批量分类（judge 的前置探索版） |
+| | `verify_clean.py` | 三层验证（分类 / 列表 / 详情） |
+| | `probe_search.py` / `probe_search_time.py` | 搜索可用性与耗时 |
+| `builders/` | `build_modes.py` | 生成 `dist2/clean.json` + `full.json` |
+| | `build_groups.py` | 生成 `dist2/adult.json` + `other.json`（两份配置切组） |
+| | `build_agg.py` | 生成 `dist2/agg_srcs.json`（聚合源清单 + 分类映射） |
+| | `build_two.py` | 生成 `dist2/two.json`（sites 只有两条的聚合配置） |
+| | `make_sub.py` | js 源订阅组装 |
+| | `play_probe.py` | 逐片探播放地址可用性 → `play_probe.json` |
+| `live/` | `merge_live.py` | 直播源合并去重 |
+| | `build_live_config.py` | 生成 `live_groups.json`（含实测通过线路） |
+| | `probe_all_routes.py` / `test_live_routes.py` | 直播线路测活 |
+| `clbug/` | `fetch_clbug.py` / `probe_clbug.py` / `verify_clbug.py` | 拉源 / 测活 / 过滤验证 |
+| | `probe_clbug_live.py` / `verify_clbug_live.py` | clbug 直播源列表与分片抽样 |
+| `deploy/` | `_worker.js` | Pages advanced mode 入口，按 `?mode=` 路由 |
+| | `worker.js` + `wrangler.toml` | Workers 版形态（备选） |
+| | `deploy_pages.py` | 纯 API 直传实现（wrangler 不可用时兜底） |
+| | `publish.py` | Direct Upload 发布 |
+| | `test_worker.mjs` | 本地校验 Worker 路由 |
+
+> 所有脚本都以**仓库根**为工作目录（`scripts/*.sh` 内部先 `cd` 到仓库根；`*.py` 用 `BASE = 仓库根` 定位数据文件），因此数据文件始终读写仓库根，可任意在根目录执行。
 
 ## 链接
 
-**主入口（2026-11-13 起）：只有两个组**
+**主入口：只有两个组**
 
 ```
 https://fm.le138.de5.net/fongmi.json        → sites 里就两条：其它 / 成人资源
 ```
 
-FongMi 的 `sites` 一条 = 一个源，App 不支持站点分组。所以"两组"的实现方式是把
-聚合搬到服务端：两条 `type:1` 站点分别指向 `/other` 和 `/adult`，Worker 内部
-把同组的几十个采集站并发拉取、去重、轮询交错成一个列表。
+FongMi 的 `sites` 一条 = 一个源，App 不支持站点分组（`bean/Site.java` 无 group 字段）。所以"两组"的实现方式是把聚合搬到服务端：两条 `type:1` 站点分别指向 `/other` 和 `/adult`，Worker 内部把同组的几十个采集站并发拉取、去重、轮询交错成一个列表。
 
 - 每条站点的分类：全部 / 电影 / 电视剧 / 综艺 / 动漫 / 纪录片 / 其它
-- 分类按每部影片自带的 `type_name` 归类（多数采集站没有分类表接口，`ac=list`
-  直接吐列表，`t=` 参数不可信）
+- 分类按每部影片自带的 `type_name` 归类（多数采集站没有分类表接口，`ac=list` 直接吐列表，`t=` 参数不可信）
 - 列表是各源轮询交错，避免被片库最大的那个站整页淹没
 - 详情/播放地址原样透传，`s<N>|` 前缀只用于还原源
 - 调试：`/other?ac=videolist&t=全部&pg=1&debug=1` 返回每个源的条数与耗时
+- 网页预览：`https://fm.le138.de5.net/preview?g=other`（浏览器直接打开会有 302 跳转）
 
 **旧链接（保留兼容）**
 
-**两组（2026-11-13 起）**——FongMi 的 `sites` 是扁平数组，App 本身没有站点分组字段
-（`bean/Site.java` 无 group），所以"两个组"落地为两份配置，在 FongMi「设置 → 配置」
-里加两条，切换配置就是切组：
-
 ```
-https://fm.le138.de5.net/fongmi.json?mode=other    → 其它组（42 正经采集站 + 96 js 源）
-https://fm.le138.de5.net/fongmi.json?mode=adult    → 成人资源组（25 采集站）
-```
-
-分组判据是**站点自身的分类名**（`judge.py`，正规分类白名单命中 ≥8），不是猜站名：
-`乐播/鲨鱼/森林/番号` 这类名字正经、实际分类全是成人词的站会被正确归到成人组。
-
-**旧链接（保留兼容）**：
-
-```
+https://fm.le138.de5.net/fongmi.json?mode=other    → 其它组（两份配置切组）
+https://fm.le138.de5.net/fongmi.json?mode=adult    → 成人资源组
 https://fm.le138.de5.net/fongmi.json              → 干净版（不含成人站）
 https://fm.le138.de5.net/fongmi.json?mode=full    → 全量（采集站 + js 源，旧口径）
 https://fongmi-sub.pages.dev/fongmi.json          → 备用域，同内容
 ```
 
-站点顺序即"优选"：按片库量降序，能搜到的靠前。
+分组判据是**站点自身的分类名**（`pipeline/judge.py`，正规分类白名单命中 ≥8），不是猜站名：`乐播/鲨鱼/森林/番号` 这类名字正经、实际分类全是成人词的站会被正确归到成人组。
 
-## 为什么要两个版本
+## 日常命令
 
-公开采集站里成人资源站占比很高（实测 56 个里 18 个明确成人、4 个疑似）。家里电视给别人看，需要一层过滤。
+```bash
+cd /app/working/fongmi-agg
+
+# 完整流程（拉源 → 测活 → 分类 → 生成 → 部署）
+bash scripts/daily_update.sh
+
+# 只生成不部署（本地看结果）
+bash scripts/daily_update.sh --no-deploy
+
+# 单步
+python3 pipeline/probe_api.py <站点列表.json>       # 测活 → ok_api.json
+python3 pipeline/classify_sites.py ok_api_final.json # 分类 → sites_clean.json
+python3 builders/build_modes.py                      # 生成 → dist2/clean.json + full.json
+bash scripts/deploy_pages.sh                         # 部署
+
+# clbug 源刷新
+bash scripts/daily_clbug.sh
+```
+
+> `daily_update.sh` 用 bash 语法（`exec > >(tee ...)`），**必须用 `bash` 跑，不能用 `sh`**（本机 `sh` 是 dash）。其余脚本 sh/bash 均可。
+
+## 为什么要做过滤
+
+公开采集站里成人资源站占比很高（实测 57 个独立源里 18 个明确成人、3 个疑似）。家里电视给别人看，需要一层过滤。
 
 过滤判据是双层的，只看名字不够（`玉兔资源` 名字正经，实测命中率 60%）：
 
@@ -59,41 +122,6 @@ https://fongmi-sub.pages.dev/fongmi.json          → 备用域，同内容
 
 抽样 20 条是启发式，可能漏网或误杀。发现不对的站，加进黑名单再跑。
 
-## 日常命令
-
-```sh
-cd /app/working/fongmi-agg
-
-# 完整流程（拉源 → 测活 → 分类 → 生成 → 部署）
-sh daily_update.sh
-
-# 只生成不部署（本地看结果）
-sh daily_update.sh --no-deploy
-
-# 单步
-python3 probe_api.py <站点列表.json>   # 测活 → ok_api.json
-python3 classify_sites.py ok_api_final.json  # 分类 → sites_clean.json
-python3 build_modes.py                 # 生成 → dist2/clean.json + full.json
-sh deploy_worker.sh                    # 部署
-```
-
-## 文件说明
-
-| 文件 | 作用 |
-|---|---|
-| `worker.js` | 入口路由，按 `?mode=` 返回对应文件 |
-| `wrangler.toml` | Workers 配置，`run_worker_first` 保证参数不被静态文件吃掉 |
-| `dist2/clean.json` | 干净版订阅 |
-| `dist2/full.json` | 全量版订阅 |
-| `dist2/js/` `dist2/lib/` | 96 个 js 源的规则文件 + drpy 引擎 |
-| `probe_api.py` | 采集站测活（判据：JSON `list` 非空 / XML `<video>` 非空） |
-| `classify_sites.py` | 内容分类（站名 + 抽样命中率） |
-| `build_modes.py` | 生成两个版本 |
-| `daily_update.sh` | 全流程编排 |
-| `deploy_worker.sh` | 部署 |
-| `backup/` | 历史配置 |
-| `logs/` | 每日运行日志，保留 14 天 |
-
 ## 部署形态：Pages + `_worker.js`（advanced mode）
 
 静态托管本身无法按 URL 参数返回不同内容。`deploy/_worker.js` 放进发布根目录后，Pages 会用它接管所有请求：
@@ -103,19 +131,17 @@ const target = url.searchParams.get('mode') === 'full' ? '/full.json' : '/clean.
 return env.ASSETS.fetch(new URL(target, url.origin));
 ```
 
-其余路径原样交给 `env.ASSETS`，所以 `/js/*.js`、`/lib/*.js` 这些 FongMi 按相对路径请求的规则文件也能正常返回。一份 `dist2/` 同时服务两个入口。
+其余路径原样交给 `env.ASSETS`，所以 `/js/*.js`、`/lib/*.js` 这些 FongMi 按相对路径请求的规则文件也能正常返回。
 
-部署命令：
-
-```sh
-bash deploy_pages.sh
+```bash
+bash scripts/deploy_pages.sh
 ```
 
-（`wrangler.toml` 是纯 Workers 版的旧配置，`pages deploy` 前会被临时移开，避免干扰。）
+凭据：优先环境变量 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`，否则读 `/app/working/instabox-keepalive/.cf_token` 与仓库根 `.cf_account`（后者已在 `.gitignore` 里）。
 
 ## 三层可用性验证
 
-`verify_clean.py` 对每个站点查三层，只有全通过才算真能用：
+`pipeline/verify_clean.py` 对每个站点查三层，只有全通过才算真能用：
 
 | 层 | 检查 | 说明 |
 |---|---|---|
@@ -131,27 +157,17 @@ bash deploy_pages.sh
 2. **采集站测活结果与本地网络强相关**：本机测通 ≠ 你家网络通。反之也可能。
 3. **成人分类是抽样启发式**，不是人工审核。
 4. **片库数来自站点的 `total` 字段**，站点自己报的，可能虚高。
-5. **不含直播源**：国内运营商 IPTV 在本机 0/40 通过，代码层面无解。
+5. **详情里的线路是"探测时刻"的状态**：CF 出口与用户家里网络出口不同，探测说能播不代表用户端一定能播，反之亦然。
 
-## 2026-11-13 扩充：接入 tvbox.clbug.com 的 115 个源
+## 接入 tvbox.clbug.com 的源
 
-从 `https://tvbox.clbug.com/user.php`（静态 HTML 表格，115 行）抓取全部订阅源，
-经「拉取 → 去重 → 测活 → 成人过滤 → 三层验证」筛出 30 个新采集站并入配置。
+从 `https://tvbox.clbug.com/user.php`（静态 HTML 表格，115 行）抓取全部订阅源，经「拉取 → 去重 → 测活 → 成人过滤 → 三层验证」筛出新的采集站并入配置。
 
-| 版本 | 采集站 | 总数 | 片库 |
-| --- | --- | --- | --- |
-| 干净版 | 24 → **41** | 120 → **137** | 271 万 → **447 万部** |
-| 全量版 | 56 → **67** | 152 → **163** | 696 万 → **804 万部** |
-
-直播源从 3 个扩到 **10 个**，共 77,000+ 频道；三个 100% 抽样存活（虎牙 1076 / 斗鱼 923 / 肥羊YY 535）。
-
-一键刷新源池：
-
-```sh
-sh daily_clbug.sh          # 五步全自动，约 5 分钟
-sh daily_update.sh         # 每日主流程，默认会先跑上面这个
-SKIP_CLBUG=1 sh daily_update.sh   # 跳过 clbug 刷新
+```bash
+bash scripts/daily_clbug.sh     # 五步全自动，约 5 分钟
 ```
 
-新增脚本：`fetch_clbug.py`（拉源）/ `probe_clbug.py`（测活）/ `verify_clbug.py`（成人过滤+三层验证）/
-`probe_clbug_live.py`（直播列表）/ `verify_clbug_live.py`（分片抽样）。
+## 留档
+
+- `docs/sites_overview.md`：站点池概览
+- `docs/legacy-classify-draft.py.txt`：早期分类草稿（语法不完整，未接入任何流程，仅留档）

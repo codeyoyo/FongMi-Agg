@@ -6,7 +6,7 @@
 # Token 权限：Account → Workers Scripts → Edit
 #            （若首次创建 Worker，还需要 Account → Workers Scripts → Edit 即可）
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
   echo "缺 CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID"
@@ -14,7 +14,7 @@ if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
 fi
 
 # 校验产物
-for f in dist2/clean.json dist2/full.json worker.js wrangler.toml; do
+for f in dist2/clean.json dist2/full.json deploy/worker.js deploy/wrangler.toml; do
   [ -f "$f" ] || { echo "缺文件: $f"; exit 1; }
 done
 
@@ -24,7 +24,7 @@ NPM_CONFIG_GLOBAL=false NODE_OPTIONS= npx --yes wrangler@latest --version >/dev/
 }
 
 echo "=== 部署"
-NPM_CONFIG_GLOBAL=false NODE_OPTIONS= npx wrangler deploy
+NPM_CONFIG_GLOBAL=false NODE_OPTIONS= npx wrangler deploy --config deploy/wrangler.toml
 
 echo
 echo "=== 部署完成后的地址"

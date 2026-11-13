@@ -9,7 +9,7 @@ sites 里就两条：
 """
 import json, os
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
 HOST = 'https://fm.le138.de5.net'
 

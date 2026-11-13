@@ -1,13 +1,13 @@
 #!/bin/bash
 # daily_update.sh —— 每日全流程：拉源 → 测活 → 分类 → 生成 → 部署
 #
-#   sh daily_update.sh            # 跑完整流程
-#   sh daily_update.sh --no-deploy # 只生成不部署（本地检查）
+#   sh scripts/daily_update.sh            # 跑完整流程
+#   sh scripts/daily_update.sh --no-deploy # 只生成不部署（本地检查）
 #
 # 依赖：python3、node（可选，用于本地校验 Worker）
 # 部署需要：CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 LOG="logs/daily-$(date +%Y%m%d-%H%M).log"
 mkdir -p logs backup
 exec > >(tee -a "$LOG") 2>&1
@@ -29,7 +29,7 @@ print(f'  采集站 {len(s)} 个')
 
 # 2) 测活
 echo "--- [2/8] 测活（并发 16）"
-python3 probe_api.py /tmp/zy_sites.json
+python3 pipeline/probe_api.py /tmp/zy_sites.json
 
 # 3) 去重
 echo "--- [3/8] 去重"
@@ -61,30 +61,30 @@ PY
 
 # 4) 分类（正经 / 成人）
 echo "--- [4/8] 内容分类"
-python3 classify_sites.py ok_api_final.json
+python3 pipeline/classify_sites.py ok_api_final.json
 
 # 5) 三层深度验证（clean 版据此收紧）
 echo "--- [5/8] 三层验证（分类/列表/详情）"
-python3 verify_clean.py sites_clean.json
+python3 pipeline/verify_clean.py sites_clean.json
 
 # 6) 搜索能力测速（决定站点排序与 searchable）
 echo "--- [6/8] 搜索测速"
-python3 probe_search_time.py | head -6
+python3 pipeline/probe_search_time.py | head -6
 
 # 7) 生成 clean.json / full.json
 echo "--- [7/8] 生成 clean.json / full.json"
-python3 build_modes.py
+python3 builders/build_modes.py
 
 # 7b) 生成两组：adult.json（成人资源组）/ other.json（其它组）
 #     判定依据是站点自身的分类名（judge.py），不是站名猜测
 echo "--- [7b] 生成 adult.json / other.json"
-python3 judge.py >/dev/null 2>&1 && python3 build_groups.py \
+python3 pipeline/judge.py >/dev/null 2>&1 && python3 builders/build_groups.py \
   || echo "  !! 分组生成失败，沿用上一版 adult/other"
 
 # 7c) 两组聚合站点：服务端把同一组的几十个源合成一个 type:1 站点
 #     two.json 的 sites 只有两条（其它 / 成人资源），配置本体 200KB 级
 echo "--- [7c] 生成聚合站点 two.json + agg_srcs.json"
-python3 build_agg.py && python3 build_two.py \
+python3 builders/build_agg.py && python3 builders/build_two.py \
   || echo "  !! 聚合站点生成失败，沿用上一版"
 
 # 6) 部署
@@ -92,7 +92,7 @@ if [ "$1" = "--no-deploy" ]; then
   echo "--- [8/8] 跳过部署（--no-deploy）"
 else
   echo "--- [8/8] 部署到 Cloudflare Pages"
-  bash deploy_pages.sh
+  bash scripts/deploy_pages.sh
 fi
 
 # 保留最近 14 天日志

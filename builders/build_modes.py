@@ -6,7 +6,7 @@
 """
 import json, os
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
 
 base_cfg = json.load(open(os.path.join(BASE, 'backup', 'fongmi-pre-mode.json')))

@@ -2,7 +2,7 @@
 """把 merge 后的频道表生成为 FongMi 内嵌直播分组（每频道多线路，播放器自动 fallback）"""
 import json, re, os
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 源可信度权重：抽样存活率越高越靠前
 SRC_RANK = {

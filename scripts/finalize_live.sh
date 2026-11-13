@@ -1,7 +1,7 @@
 #!/bin/sh
 # finalize_live.sh —— 等实测数据齐了，重建直播聚合并部署
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 echo "=== 实测数据状态"
 python3 - <<'PY'
@@ -17,10 +17,10 @@ print(f'  可用线路总数 {n}')
 PY
 
 echo "=== 重建直播分组（只留实测通过线路）"
-python3 build_live_config.py
+python3 live/build_live_config.py
 
 echo "=== 生成配置"
-python3 build_modes.py
+python3 builders/build_modes.py
 
 echo "=== 部署"
-bash deploy_pages.sh 2>&1 | tail -5
+bash scripts/deploy_pages.sh 2>&1 | tail -5

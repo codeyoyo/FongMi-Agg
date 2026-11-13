@@ -1,8 +1,8 @@
 #!/bin/sh
 # daily_clbug.sh —— 从 tvbox.clbug.com 拉取全部订阅源，筛出优质采集站并合并进主池
-# 用法: sh daily_clbug.sh
+# 用法: sh scripts/daily_clbug.sh
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 echo "=== [1/5] 抓取 tvbox.clbug.com 源清单"
 curl -sL -m 40 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0" \
@@ -22,13 +22,13 @@ print(f'  源清单 {len(out)} 条')
 PY
 
 echo "=== [2/5] 并发拉取各源配置"
-python3 fetch_clbug.py | head -4
+python3 clbug/fetch_clbug.py | head -4
 
 echo "=== [3/5] 采集站测活"
-python3 probe_clbug.py | head -4
+python3 clbug/probe_clbug.py | head -4
 
 echo "=== [4/5] 成人过滤 + 三层验证"
-python3 verify_clbug.py | head -4
+python3 clbug/verify_clbug.py | head -4
 
 echo "=== [5/5] 合并进主池"
 python3 - <<'PY'
@@ -52,4 +52,4 @@ json.dump(pool, open('sites_verified_pool.json','w'), ensure_ascii=False, indent
 print(f'  合并池 {len(pool)} 个站，片库 ≈ {sum(int(s.get("_total") or 0) for s in pool)} 部')
 PY
 
-echo "=== 完成，下一步: python3 build_modes.py && bash deploy_pages.sh"
+echo "=== 完成，下一步: python3 builders/build_modes.py && bash scripts/deploy_pages.sh"

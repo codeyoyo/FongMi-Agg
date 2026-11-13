@@ -10,7 +10,7 @@ App 里不存在"站点分组"。所以"两个组"落地为两份配置：用户
 """
 import json, os
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
 
 kinds = json.load(open(os.path.join(BASE, 'kinds2.json')))

@@ -7,7 +7,7 @@
 import json, os, re, sys, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 
 

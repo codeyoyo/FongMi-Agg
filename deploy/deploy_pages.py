@@ -4,7 +4,7 @@
 用法：
   CLOUDFLARE_API_TOKEN=xxx python3 deploy_pages.py [项目名]
 
-依赖：dist2/ 与 deploy/_worker.js
+依赖：dist2/（仓库根）与本文件同目录的 _worker.js
 """
 import json, os, sys, urllib.request, uuid
 
@@ -13,6 +13,7 @@ TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN') or open(
 ACCT = os.environ.get('CLOUDFLARE_ACCOUNT_ID', 'fcffd8e2ea9a87b44fa8ba5e6f5d485c')
 PROJ = sys.argv[1] if len(sys.argv) > 1 else 'fongmi-sub'
 BASE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(BASE)
 API = 'https://api.cloudflare.com/client/v4'
 
 
@@ -48,13 +49,13 @@ def ensure_project():
 def collect():
     """返回 [(相对路径, bytes)]"""
     out = []
-    w = os.path.join(BASE, 'deploy', '_worker.js')
+    w = os.path.join(BASE, '_worker.js')
     out.append(('_worker.js', open(w, 'rb').read()))
     for root in ('dist2',):
-        for dirpath, _, files in os.walk(os.path.join(BASE, root)):
+        for dirpath, _, files in os.walk(os.path.join(ROOT, root)):
             for f in files:
                 p = os.path.join(dirpath, f)
-                rel = os.path.relpath(p, os.path.join(BASE, root))
+                rel = os.path.relpath(p, os.path.join(ROOT, root))
                 out.append((rel, open(p, 'rb').read()))
     return out
 

@@ -3,7 +3,7 @@
 import json, os, sys, time, concurrent.futures as cf
 from test_live_routes import check
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAX_PROBE = 14          # 每频道最多测多少条候选线路
 
 
