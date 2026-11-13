@@ -30,6 +30,20 @@ BUCKETS = [
 ADULT_KWS = ('福利', '情色', '伦理', '写真', '无码', '三级', '自拍', '主播',
              '抖阴', '偷拍', '人妻', '激情', '约炮', '里番', '丝袜', '成人')
 
+# 成人站的点播分类和影视站不是一回事：套用影视那套会把一大半内容塞进「其它」
+ADULT_BUCKETS = [
+    ('国产', ['国产', '自拍', '主播', '传媒', '91', '抖阴', '视频一区', '视频1区']),
+    ('日本', ['日本', '日韩', '无码', '有码', '片商', '中文字幕']),
+    ('欧美', ['欧美', '西方']),
+    ('动漫', ['动漫', '动画', '卡通']),
+    ('伦理', ['伦理', '三级', '剧情', '短剧']),
+]
+GROUP_BUCKETS = {'other': BUCKETS, 'adult': ADULT_BUCKETS}
+GROUP_ORDER = {
+    'other': ['电影', '电视剧', '综艺', '动漫', '纪录片', '其它'],
+    'adult': ['国产', '日本', '欧美', '动漫', '伦理', '其它'],
+}
+
 MAX_SRC_PER_BUCKET = 18   # Cloudflare 每请求 subrequest 上限 50，留足余量
 
 
@@ -125,8 +139,8 @@ def probe_tid(site, tid):
     return 'all'
 
 
-def bucket_of(name):
-    for b, kws in BUCKETS:
+def bucket_of(name, table=None):
+    for b, kws in (table or BUCKETS):
         for k in kws:
             if k in name:
                 return b
@@ -162,31 +176,38 @@ def main():
             if len(good) >= 3:
                 srcs = good
         srcs.sort(key=lambda x: (-x.get('_q', {}).get('rate', 0), -int(x.get('_total') or 0)))
-        buckets, used, modes = {}, {}, {}
+        # 先列候选，再并发探测：串行探测 200+ 次会让这一步跑上十分钟
+        cands = []
         for r in srcs:
-            # 每个源在每个桶最多贡献 1 个 tid
             seen = set()
             for tid, cname in r['_cls']:
                 if grp == 'other' and any(k in cname for k in ADULT_KWS):
                     continue
-                b = bucket_of(cname)
+                b = bucket_of(cname, GROUP_BUCKETS[grp])
                 if b in seen:
                     continue
                 seen.add(b)
-                if used.get(b, 0) >= MAX_SRC_PER_BUCKET:
-                    continue
-                used[b] = used.get(b, 0) + 1
-                mode = probe_tid(r, tid)
-                q = ('ac=videolist&t=%s&pg={pg}' % tid) if mode == 't' else 'ac=videolist&pg={pg}'
-                md = modes.setdefault(b, {}).setdefault(mode, 0)
-                modes[b][mode] = md + 1
-                buckets.setdefault(b, []).append({
-                    'name': r['name'], 'api': r['api'], 'type': r['type'],
-                    'tid': tid, 'cname': cname, 'total': int(r.get('_total') or 0),
-                    'q': q,
-                })
-        order = ['电影', '电视剧', '综艺', '动漫', '纪录片', '其它']
-        bl = [{'name': b, 'srcs': buckets[b]} for b in order if buckets.get(b)]
+                cands.append((r, tid, cname, b))
+        with ThreadPoolExecutor(max_workers=12) as ex:
+            modes_res = list(ex.map(lambda c: probe_tid(c[0], c[1]), cands))
+
+        buckets, used, modes = {}, {}, {}
+        for (r, tid, cname, b), mode in zip(cands, modes_res):
+            if used.get(b, 0) >= MAX_SRC_PER_BUCKET:      # 每桶最多 N 源，按排序取前面的
+                continue
+            used[b] = used.get(b, 0) + 1
+            modes[b] = modes.get(b, {})
+            modes[b][mode] = modes[b].get(mode, 0) + 1
+            q = ('ac=videolist&t=%s&pg={pg}' % tid) if mode == 't' else 'ac=videolist&pg={pg}'
+            buckets.setdefault(b, []).append({
+                'name': r['name'], 'api': r['api'], 'type': r['type'],
+                'tid': tid, 'cname': cname, 'total': int(r.get('_total') or 0),
+                'q': q,
+            })
+
+        order = GROUP_ORDER[grp]
+        kws_map = dict(GROUP_BUCKETS[grp])
+        bl = [{'name': b, 'kws': kws_map.get(b, []), 'srcs': buckets[b]} for b in order if buckets.get(b)]
         out[grp] = {'buckets': bl}
         print(f'{grp}: {len(srcs)} 源 → ' +
               ', '.join(f"{b['name']}{len(b['srcs'])}" for b in bl))

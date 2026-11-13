@@ -64,8 +64,12 @@
 https://fm.le138.de5.net/fongmi.json   → sites 里就两条：影视资源 / 成人资源
 ```
 
-- `影视资源` → `/other`：18 个正经采集站聚合，站内分类名命中成人词的条目已剔除
+- `影视资源` → `/movie`：18 个正经采集站聚合，站内分类名命中成人词的条目已剔除
+  （`/other` 是历史入口，保留兼容）
 - `成人资源` → `/adult`：20 个成人采集站聚合
+
+两组的分类**不是同一套**：影视组是 全部/电影/电视剧/综艺/动漫/其它，
+成人组是 全部/国产/日本/欧美/动漫/伦理/其它。分类桶的关键词跟着 `agg_srcs.json` 走，不写死在 Worker 里。
 
 两条都是 `type: 1`，设备端零依赖。**不是两份配置靠 URL 参数切换**——那正是之前被否掉的做法。
 
@@ -119,7 +123,7 @@ bash scripts/daily_clbug.sh
 
 不是把 N 个源简单拼起来，四件事都在做：
 
-1. **按站内分类拉取**。`builders/build_agg.py` 在构建期逐源探测「这个站认不认分类参数 `t=`」，
+1. **按站内分类拉取**（每桶最多 18 个源）。`builders/build_agg.py` 在构建期逐源探测「这个站认不认分类参数 `t=`」，
    把结果写成 `q` 模板存进 `agg_srcs.json`。运行时直接按记好的形态发请求，零试错。
    实测 18 个源里只有 3–4 个认 `t=`，其余只能拉全量再本地按 `type_name` 过滤。
 2. **交错去重**。各源列表按轮询交错（`interleave`），避免被片库最大的站整页淹没；
@@ -181,15 +185,15 @@ bash scripts/deploy_pages.sh
 
 | 场景 | 请求 | 期望 |
 | --- | --- | --- |
-| 首页/分类表 | `GET /other`（无任何参数） | `{"class":[...]}` |
-| 分类列表 | `GET /other?ac=detail&t=电影&pg=1` | `{"list":[...]}` |
-| 详情 | `GET /other?ac=detail&ids=s1\|149716` | `{"list":[{…vod_play_url}]}` |
-| 搜索 | `GET /other?wd=斗罗&quick=true&extend=` | `{"list":[...]}` |
+| 首页/分类表 | `GET /movie`（无任何参数） | `{"class":[...]}` |
+| 分类列表 | `GET /movie?ac=detail&t=电影&pg=1` | `{"list":[...]}` |
+| 详情 | `GET /movie?ac=detail&ids=s1\|149716` | `{"list":[{…vod_play_url}]}` |
+| 搜索 | `GET /movie?wd=斗罗&quick=true&extend=` | `{"list":[...]}` |
 
 容易写错的两点：type=1 站点的分类请求 `ac` 就是 `detail`（`ac()` 只在 type=0 时返回 `videolist`），
 且**没有 ids**；搜索请求**不带 ac**。曾因为按 `ac==='detail'` 判详情，把分类请求全吞成空列表。
 
-一键回归：`python3 scripts/verify_agg.py https://fm.le138.de5.net other`
+一键回归：`python3 scripts/verify_agg.py https://fm.le138.de5.net movie`（成人组传 `adult`）
 
 ## 已知局限
 

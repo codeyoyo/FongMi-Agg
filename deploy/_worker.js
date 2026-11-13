@@ -1,7 +1,7 @@
 // _worker.js —— Pages advanced mode
 //
 // 两份"组"配置（FongMi sites 里只有两条，每条内部聚合几十个源）：
-//   /other                       → 「其它」聚合站（TVBox 采集站协议）
+//   /movie                       → 「影视资源」聚合站（/other 为兼容旧入口）
 //   /adult                       → 「成人资源」聚合站
 // 两种站点类型都是 type:1（纯 HTTP），FongMi 直接支持，设备端不需要装任何模块。
 //
@@ -14,6 +14,7 @@
 // 旧入口保留：/fongmi.json 默认 clean，?mode=other|adult|full|basic
 
 const TIMEOUT_MS = 4000;
+const SEARCH_MS = 2500;   // 详情页并线路时的搜索超时，宁可少一条线路也不要卡十几秒
 const BATCH = 6;
 const CACHE_SECONDS = 300;
 const UA = 'Mozilla/5.0 (Linux; Android 12)';
@@ -60,9 +61,9 @@ async function runBatched(factories) {
   return out;
 }
 
-async function fetchText(url, type) {
+async function fetchText(url, type, ms) {
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctl.abort(), ms || TIMEOUT_MS);
   try {
     const res = await fetch(url, {
       signal: ctl.signal,
@@ -146,9 +147,9 @@ function parseXmlClasses(body) {
   return out;
 }
 
-async function pull(src, query) {
+async function pull(src, query, ms) {
   const q = src.type === 0 ? query + '&at=xml' : query;
-  const body = await fetchText(joinApi(src.api, q), src.type);
+  const body = await fetchText(joinApi(src.api, q), src.type, ms);
   if (!body) return null;
   if (src.type === 0 || body.trim().startsWith('<')) {
     return { kind: 'xml', body };
@@ -226,15 +227,21 @@ function bucketByName(g, name) {
 
 
 function pageHtml(group, items, extra) {
-  const title = group === 'adult' ? '成人资源' : '其它';
+  const title = group === 'adult' ? '成人资源' : '影视资源';
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const cards = items.map((x) => `
     <a class="c" href="${esc(x.vod_pic || '')}" target="_blank" rel="noreferrer">
       <img loading="lazy" src="${esc(x.vod_pic || '')}" alt="">
       <div class="m"><b>${esc(x.vod_name)}</b><span>${esc(x.type_name || '')} ${esc(x.vod_remarks || '')}</span><em>${esc(x._src || '')}</em></div>
     </a>`).join('');
-  const nav = ['other', 'adult'].map((g) => `<a class="${g === group ? 'on' : ''}" href="/preview?g=${g}">${g === 'adult' ? '成人资源' : '其它'}</a>`).join('');
-  const cats = ['全部', '电影', '电视剧', '综艺', '动漫', '纪录片'].map((c) => `<a class="${c === extra.cat ? 'on' : ''}" href="/preview?g=${group}&t=${encodeURIComponent(c)}">${c}</a>`).join('');
+  const nav = [['other', '影视资源'], ['adult', '成人资源']]
+    .map(([g, n]) => `<a class="${g === group ? 'on' : ''}" href="/preview?g=${g}">${n}</a>`)
+    .join('');
+  // 分类导航跟着 agg_srcs.json 走：两组各有一套分类，不能写死
+  const catNames = ['全部'].concat(((extra && extra.buckets) || []).map((b) => b.name));
+  const cats = catNames
+    .map((c) => `<a class="${c === extra.cat ? 'on' : ''}" href="/preview?g=${group}&t=${encodeURIComponent(c)}">${c}</a>`)
+    .join('');
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} · 聚合预览</title>
@@ -336,7 +343,11 @@ async function handleCategory(g, bucketName, pg) {
     }
     let final = items;
     if (!wantAll) {
-      const byType = items.filter((it) => bucketOf(it.type_name) === bucketName);
+      // 每个分类桶自带关键词（影视组和成人组各一套），不要共用同一张表
+      const kws = (bucket && bucket.kws) || [];
+      const byType = kws.length
+        ? items.filter((it) => { const t = String(it.type_name || ''); return kws.some((k) => t.includes(k)); })
+        : items;
       // 站内 tid 生效时结果本就该全是该类；过滤后为空说明它忽略了 t，退回原列表
       final = src.tid && byType.length === 0 ? items : byType;
     }
@@ -374,7 +385,9 @@ async function handleDetail(g, ids) {
   for (const [idx, arr] of bySrc) {
     const src = all[idx];
     if (!src) continue;
-    const r = await pull(src, `ac=detail&ids=${encodeURIComponent(arr.map((x) => x.vid).join(','))}`);
+    // 主源是唯一必须成功的：它超时整个详情就空，所以给更长超时并重试一次
+    const dq = `ac=detail&ids=${encodeURIComponent(arr.map((x) => x.vid).join(','))}`;
+    const r = (await pull(src, dq, 5000)) || (await pull(src, dq, 5000));
     if (!r) continue;
     let list = [];
     if (r.kind === 'xml') list = parseXmlVideos(r.body);
@@ -396,7 +409,7 @@ async function handleDetail(g, ids) {
       // 阶段一：并发搜索，只留真正命中同名的
       const hits = await runBatched(
         others.map(({ s, i }) => async () => {
-          const r = await pull(s, `wd=${encodeURIComponent(name)}&ac=videolist&pg=1`);
+          const r = await pull(s, `wd=${encodeURIComponent(name)}&ac=videolist&pg=1`, SEARCH_MS);
           if (!r) return null;
           const items = r.kind === 'xml' ? parseXmlVideos(r.body) : (r.data && r.data.list) || [];
           const hit = items.find((x) => String(x.vod_name || '').trim() === name);
@@ -529,18 +542,19 @@ export default {
         const src = srcs[idx];
         return { ...x, _src: src ? src.name : '' };
       });
-      return new Response(pageHtml(group, list, { n: srcs.length, cat }), {
+      return new Response(pageHtml(group, list, { n: srcs.length, cat, buckets: g.buckets || [] }), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=120' },
       });
     }
 
-    if (path === '/other' || path === '/adult') {
+    if (path === '/movie' || path === '/other' || path === '/adult') {
+      // /other 是历史入口，保留兼容；正式路径为 /movie
       // 浏览器直接点开时不要糊一脸 JSON，跳去网页预览
       const accept = request.headers.get('Accept') || '';
       if (!url.searchParams.get('ac') && !url.searchParams.get('wd') && accept.includes('text/html')) {
         return Response.redirect(url.origin + '/preview?g=' + (path === '/adult' ? 'adult' : 'other'), 302);
       }
-      const group = path === '/adult' ? 'adult' : 'other';
+      const group = path === '/adult' ? 'adult' : 'other';   // /movie 与 /other 同组
       const g = await loadGroup(env, url.origin, group);
       if (!g) return json({ list: [] }, 500);
 
