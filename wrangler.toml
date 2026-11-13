@@ -1,0 +1,14 @@
+name = "fongmi-sub"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+# 静态资源：dist2/ 整个目录，Worker 通过 env.ASSETS 读取
+[assets]
+directory = "./dist2"
+binding = "ASSETS"
+
+# 关键：/fongmi.json 必须先过 Worker，否则静态文件优先、参数失效
+run_worker_first = ["/fongmi.json"]
+
+[observability]
+enabled = true

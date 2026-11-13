@@ -1,0 +1,17 @@
+#EXTM3U
+#EXTINF:-1 group-title="Religious",Ando TV (1080p) [100]
+http://v4-3604b7607d86d2c16004620fc18c4fe2.livehwc4.com/play.kankanlive.com/live/1711956137852982.m3u8?sub_m3u8=true&edge_slice=true&user_session_id=0b242680b87209952459d1fdb9e47008
+#EXTINF:-1 group-title="Undefined",Bread TV (720p) [100]
+https://video.bread-tv.com:8091/hls-live24/online/index.m3u8
+#EXTINF:-1 group-title="Sports",CCTV-5+ (1080p) [100]
+https://168.sryze.cc/163189/cctv5p
+#EXTINF:-1 group-title="Religious",ABN China (720p) [80]
+https://mediaserver.abnvideos.com/streams/abnchina.m3u8
+#EXTINF:-1 group-title="Religious",Angel TV Chinese (720p) [80]
+https://janya-digimix.akamaized.net/vglive-sk-999451/chinese/ngrp:angelchinese_all/chunklist_b400000.m3u8
+#EXTINF:-1 group-title="General",Baicheng TV [Geo-blocked] [80]
+https://stream2.jlntv.cn/baicheng1/sd/live.m3u8
+#EXTINF:-1 group-title="General",CCTV-1 (720p) [80]
+http://74.91.26.218:82/live/cctv1hd.m3u8
+#EXTINF:-1 group-title="Entertainment",CCTV-3 (720p) [80]
+http://74.91.26.218:82/live/cctv3hd.m3u8

@@ -1,0 +1,6 @@
+# qist/tvbox —— 每日更新的 TVBox 配置
+https://raw.githubusercontent.com/qist/tvbox/master/0821.json
+https://raw.githubusercontent.com/qist/tvbox/master/list.txt
+# gaotianliuyun/gao —— FongMi/tvbox 配置
+https://raw.githubusercontent.com/gaotianliuyun/gao/master/0821.json
+https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json
