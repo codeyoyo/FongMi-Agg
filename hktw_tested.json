@@ -1,0 +1,714 @@
+{
+ "凤凰卫视中文台": {
+  "n_all": 34,
+  "n_tested": 12,
+  "good": [
+   {
+    "url": "http://120.238.85.131:9901/tsfile/live/1006_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 799
+   },
+   {
+    "url": "http://118.248.156.76:8889/udp/239.76.253.134:9000",
+    "src": "全国组播",
+    "ms": 1206
+   },
+   {
+    "url": "http://120.76.248.139/live/bfgd/4200000484.m3u8",
+    "src": "超清测试",
+    "ms": 1312
+   },
+   {
+    "url": "http://183.237.95.108:9901/tsfile/live/1103_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 1607
+   },
+   {
+    "url": "http://120.198.84.146:9901/tsfile/live/1053_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 11332
+   }
+  ]
+ },
+ "凤凰卫视资讯台": {
+  "n_all": 39,
+  "n_tested": 12,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/0Rp07",
+    "src": "直播",
+    "ms": 179
+   },
+   {
+    "url": "http://php.jdshipin.com/TVOD/iptv.php?id=fhzx",
+    "src": "直播",
+    "ms": 427
+   },
+   {
+    "url": "http://120.198.95.220:9901/tsfile/live/1037_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 1777
+   },
+   {
+    "url": "http://120.76.248.139/live/bfgd/4200000201.m3u8",
+    "src": "超清测试",
+    "ms": 1849
+   },
+   {
+    "url": "http://120.198.95.220:9901/tsfile/live/1037_1.m3u8?key=txiptv&playlive=1&down=1",
+    "src": "应该能看",
+    "ms": 2203
+   }
+  ]
+ },
+ "凤凰卫视": {
+  "n_all": 6,
+  "n_tested": 6,
+  "good": [
+   {
+    "url": "http://221.7.175.154:8445/tsfile/live/1020_1.m3u8",
+    "src": "超清测试",
+    "ms": 433
+   },
+   {
+    "url": "http://120.238.94.82:9901/tsfile/live/1062_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 569
+   },
+   {
+    "url": "http://120.196.235.42:9901/tsfile/live/1036_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 1504
+   },
+   {
+    "url": "http://110.178.145.84:8188/udp/239.1.1.126:8126",
+    "src": "全国组播",
+    "ms": 1622
+   }
+  ]
+ },
+ "凤凰香港频标": {
+  "n_all": 14,
+  "n_tested": 11,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/NfC0f",
+    "src": "直播",
+    "ms": 379
+   },
+   {
+    "url": "http://r.jdshipin.com/NfC0f",
+    "src": "Guovin",
+    "ms": 393
+   },
+   {
+    "url": "http://r.jdshipin.com/yDoTN",
+    "src": "直播",
+    "ms": 395
+   },
+   {
+    "url": "http://r.jdshipin.com/yDoTN",
+    "src": "Guovin",
+    "ms": 398
+   },
+   {
+    "url": "http://php.jdshipin.com/TVOD/iptv.php?id=fhhk",
+    "src": "直播",
+    "ms": 407
+   },
+   {
+    "url": "http://php.jdshipin.com/TVOD/iptv.php?id=fhhk",
+    "src": "Guovin",
+    "ms": 436
+   }
+  ]
+ },
+ "翡翠台": {
+  "n_all": 24,
+  "n_tested": 12,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/qClQf",
+    "src": "Guovin",
+    "ms": 157
+   },
+   {
+    "url": "http://r.jdshipin.com/qrfbg",
+    "src": "直播",
+    "ms": 179
+   },
+   {
+    "url": "http://r.jdshipin.com/qrfbg",
+    "src": "Guovin",
+    "ms": 188
+   },
+   {
+    "url": "http://r.jdshipin.com/qClQf",
+    "src": "直播",
+    "ms": 201
+   },
+   {
+    "url": "http://120.238.94.82:9901/tsfile/live/1007_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 1514
+   },
+   {
+    "url": "http://183.62.8.58:50085/tsfile/live/0017_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 2674
+   },
+   {
+    "url": "http://120.238.85.131:9901/tsfile/live/1005_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 3410
+   }
+  ]
+ },
+ "翡翠台北美版": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://php.jdshipin.com:8880/TVOD/iptv.php?id=j1",
+    "src": "Collect",
+    "ms": 447
+   }
+  ]
+ },
+ "明珠台": {
+  "n_all": 11,
+  "n_tested": 9,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/ZQ4kN",
+    "src": "Collect",
+    "ms": 460
+   },
+   {
+    "url": "http://120.238.94.82:9901/tsfile/live/1008_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 1521
+   },
+   {
+    "url": "http://183.62.8.58:50085/tsfile/live/0018_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 2185
+   },
+   {
+    "url": "http://183.237.95.108:9901/tsfile/live/1009_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 6564
+   }
+  ]
+ },
+ "无线新闻": {
+  "n_all": 14,
+  "n_tested": 10,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/CkuBd",
+    "src": "Guovin",
+    "ms": 190
+   },
+   {
+    "url": "http://r.jdshipin.com/CkuBd",
+    "src": "直播",
+    "ms": 273
+   },
+   {
+    "url": "http://php.jdshipin.com/TVOD/iptv.php?id=wxxw",
+    "src": "Collect",
+    "ms": 624
+   },
+   {
+    "url": "https://h5cdn3.kylintv.tv/live/tvbnews_iphone.m3u8",
+    "src": "超清测试",
+    "ms": 811
+   },
+   {
+    "url": "https://h5cdn3.kylintv.tv/live/tvbnews_iphone.m3u8",
+    "src": "直播",
+    "ms": 812
+   },
+   {
+    "url": "https://h5cdn3.kylintv.tv/live/tvbnews_iphone.m3u8",
+    "src": "Guovin",
+    "ms": 818
+   },
+   {
+    "url": "https://h5cdn3.kylintv.tv/live/tvbnews_iphone.m3u8",
+    "src": "电视狗",
+    "ms": 822
+   }
+  ]
+ },
+ "无线星河": {
+  "n_all": 5,
+  "n_tested": 3,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/sXuuD",
+    "src": "Guovin",
+    "ms": 201
+   },
+   {
+    "url": "http://r.jdshipin.com/Voac4",
+    "src": "Guovin",
+    "ms": 411
+   }
+  ]
+ },
+ "TVB Plus": {
+  "n_all": 4,
+  "n_tested": 4,
+  "good": [
+   {
+    "url": "https://cdn3.indevs.in/stream/tvb/tvbp/",
+    "src": "应该能看",
+    "ms": 839
+   }
+  ]
+ },
+ "ViuTV": {
+  "n_all": 6,
+  "n_tested": 4,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/vSJvl",
+    "src": "Guovin",
+    "ms": 198
+   },
+   {
+    "url": "http://r.jdshipin.com/TcKr2",
+    "src": "Guovin",
+    "ms": 220
+   },
+   {
+    "url": "http://php.jdshipin.com/TVOD/iptv.php?id=viutv",
+    "src": "iptv-org",
+    "ms": 612
+   }
+  ]
+ },
+ "中天新闻": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "TVBS亚洲": {
+  "n_all": 6,
+  "n_tested": 6,
+  "good": [
+   {
+    "url": "http://38.64.72.148/hls/modn/list/4005/chunklist0.m3u8",
+    "src": "Guovin",
+    "ms": 1091
+   },
+   {
+    "url": "http://38.64.72.148/hls/modn/list/4005/playlist.m3u8",
+    "src": "Collect",
+    "ms": 1233
+   },
+   {
+    "url": "http://38.64.72.148/hls/modn/list/4005/playlist.m3u8",
+    "src": "iptv-org",
+    "ms": 1374
+   },
+   {
+    "url": "http://38.64.72.148:80/hls/modn/list/4005/playlist.m3u8",
+    "src": "电视狗",
+    "ms": 1416
+   },
+   {
+    "url": "http://38.64.72.148:80/hls/modn/list/4005/playlist.m3u8",
+    "src": "Guovin",
+    "ms": 1428
+   },
+   {
+    "url": "http://38.64.72.148/hls/modn/list/4005/chunklist0.m3u8",
+    "src": "电视狗",
+    "ms": 2329
+   }
+  ]
+ },
+ "东森超视": {
+  "n_all": 7,
+  "n_tested": 4,
+  "good": [
+   {
+    "url": "http://38.64.72.148:80/hls/modn/list/2013/chunklist1.m3u8",
+    "src": "Guovin",
+    "ms": 1112
+   },
+   {
+    "url": "http://38.64.72.148:80/hls/modn/list/2013/chunklist1.m3u8",
+    "src": "电视狗",
+    "ms": 1350
+   }
+  ]
+ },
+ "纬来体育": {
+  "n_all": 10,
+  "n_tested": 3,
+  "good": [
+   {
+    "url": "https://epg.pw/stream/ab6df63b64d0cc44a1f4f029ed847a26fa54a7aebd455578fb05a63f02c22f4b.m3u8",
+    "src": "Guovin",
+    "ms": 1311
+   },
+   {
+    "url": "https://epg.pw/stream/8855a9936e37e608a0ec8a014cce1673dee9c5d68d560da376cc92e5edef2b25.m3u8",
+    "src": "Guovin",
+    "ms": 1372
+   }
+  ]
+ },
+ "民视": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://211.72.174.95:8115/0.ts",
+    "src": "应该能看",
+    "ms": 522
+   }
+  ]
+ },
+ "民视新闻HD": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "台视": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://211.72.174.95:8112/0.ts",
+    "src": "应该能看",
+    "ms": 534
+   }
+  ]
+ },
+ "台视新闻": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://38.64.72.148/hls/modn/list/4013/chunklist1.m3u8",
+    "src": "Collect",
+    "ms": 1846
+   }
+  ]
+ },
+ "公视": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://211.72.174.95:8116/0.ts",
+    "src": "应该能看",
+    "ms": 553
+   }
+  ]
+ },
+ "靖天映画": {
+  "n_all": 7,
+  "n_tested": 6,
+  "good": []
+ },
+ "靖天戏剧": {
+  "n_all": 4,
+  "n_tested": 4,
+  "good": []
+ },
+ "澳门卫视": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://183.237.95.108:9901/tsfile/live/1106_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 1806
+   }
+  ]
+ },
+ "TVB星河": {
+  "n_all": 3,
+  "n_tested": 3,
+  "good": [
+   {
+    "url": "https://cdn3.indevs.in/stream/live/tvbxh/",
+    "src": "应该能看",
+    "ms": 360
+   },
+   {
+    "url": "http://120.198.95.220:9901/tsfile/live/1005_1.m3u8?key=txiptv&playlive=1&down=1",
+    "src": "应该能看",
+    "ms": 641
+   },
+   {
+    "url": "http://120.198.95.220:9901/tsfile/live/1005_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 2730
+   }
+  ]
+ },
+ "无线华丽": {
+  "n_all": 2,
+  "n_tested": 2,
+  "good": [
+   {
+    "url": "http://php.jdshipin.com:8880/TVOD/iptv.php?id=huali",
+    "src": "超清测试",
+    "ms": 452
+   }
+  ]
+ },
+ "HOY TV": {
+  "n_all": 2,
+  "n_tested": 2,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/sFw4S",
+    "src": "Collect",
+    "ms": 394
+   }
+  ]
+ },
+ "TVB频道": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://120.238.94.82:9901/tsfile/live/1005_1.m3u8?key=txiptv&playlive=1&authid=0",
+    "src": "应该能看",
+    "ms": 2877
+   }
+  ]
+ },
+ "HOY Infotainment": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "TVBS News": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "HOY78": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "TVBS新闻台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://61.221.215.25:8800/hls/9/index.m3u8",
+    "src": "Collect",
+    "ms": 486
+   }
+  ]
+ },
+ "三立戏剧": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://61.221.215.25:8800/hls/41/index.m3u8",
+    "src": "Collect",
+    "ms": 494
+   }
+  ]
+ },
+ "八大戏剧台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "华丽翡翠台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://r.jdshipin.com/thuYX",
+    "src": "Collect",
+    "ms": 427
+   }
+  ]
+ },
+ "寰宇新闻台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "纬来精采": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": [
+   {
+    "url": "http://61.221.215.25:8800/hls/48/index.m3u8",
+    "src": "Collect",
+    "ms": 477
+   }
+  ]
+ },
+ "凤凰卫视电影台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "凤凰卫视美洲台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "凤凰卫视香港台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线星河粤": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "香港卫视": {
+  "n_all": 15,
+  "n_tested": 6,
+  "good": []
+ },
+ "有线新闻": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "有线综合": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "星空卫视": {
+  "n_all": 11,
+  "n_tested": 7,
+  "good": []
+ },
+ "三立新闻": {
+  "n_all": 5,
+  "n_tested": 3,
+  "good": []
+ },
+ "东森电影": {
+  "n_all": 4,
+  "n_tested": 3,
+  "good": []
+ },
+ "东森洋片": {
+  "n_all": 3,
+  "n_tested": 3,
+  "good": []
+ },
+ "东森综合": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "纬来育乐": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "纬来电影": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "靖天资讯": {
+  "n_all": 2,
+  "n_tested": 2,
+  "good": []
+ },
+ "澳视澳门": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线娱乐": {
+  "n_all": 2,
+  "n_tested": 2,
+  "good": []
+ },
+ "TVB-无线新闻": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "TVB-1 US": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "TVB-J1 US": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "TVB-E US": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "TVB drama": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线功夫台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线综艺台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线亚剧台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线粤片台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线戏曲台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线千禧": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线J1美": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "无线翡剧": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ },
+ "三立台湾台": {
+  "n_all": 1,
+  "n_tested": 1,
+  "good": []
+ }
+}

@@ -21,28 +21,34 @@ def check(url):
         data, ms = fetch(url)
         txt = data.decode('utf-8', 'ignore')
         if '#EXTM3U' not in txt:
-            # 可能直接是 ts
-            return (len(data) > 5000), ms, 'ts?%d' % len(data)
+            # 直接给分片：MPEG-TS 必须以 0x47 同步字节开头。
+            # 旧逻辑只看「响应 > 5000 字节」，把 HTML 落地页也当成了 ts。
+            return (data[:1] == b'\x47' and len(data) > 20000), ms, 'ts?%d' % len(data)
         lines = [l.strip() for l in txt.splitlines() if l.strip() and not l.startswith('#')]
         if not lines:
             return False, ms, 'empty-playlist'
-        # 主列表 → 子列表
-        sub = urljoin(url, lines[0])
-        if sub != url and '.ts' not in sub:
+        first = urljoin(url, lines[0])
+        # 首行就是分片：必须真下到内容，不能凭「有 m3u8」就算通
+        if '.ts' in first or '.m4s' in first or 'segment' in first:
             try:
-                d2, ms2 = fetch(sub)
-                t2 = d2.decode('utf-8', 'ignore')
-                if '#EXTM3U' in t2:
-                    segs = [l.strip() for l in t2.splitlines() if l.strip() and not l.startswith('#')]
-                    if segs:
-                        sg = urljoin(sub, segs[0])
-                        d3, ms3 = fetch(sg, timeout=8, limit=80_000)
-                        if len(d3) > 1000:
-                            return True, ms + ms2 + ms3, 'seg%dk' % (len(d3) // 1024)
-                return False, ms2, 'sub-no-seg'
-            except Exception:
-                return False, ms, 'sub-fail'
-        return True, ms, 'direct'
+                d1, ms1 = fetch(first, timeout=8, limit=80_000)
+                return (len(d1) > 1000), ms + ms1, 'seg%d' % len(d1)
+            except Exception as e:
+                return False, ms, type(e).__name__
+        # 否则当主播放列表，下钻到子列表再取分片
+        try:
+            d2, ms2 = fetch(first)
+            t2 = d2.decode('utf-8', 'ignore')
+            if '#EXTM3U' in t2:
+                segs = [l.strip() for l in t2.splitlines() if l.strip() and not l.startswith('#')]
+                if segs:
+                    sg = urljoin(first, segs[0])
+                    d3, ms3 = fetch(sg, timeout=8, limit=80_000)
+                    if len(d3) > 1000:
+                        return True, ms + ms2 + ms3, 'seg%dk' % (len(d3) // 1024)
+            return False, ms2, 'sub-no-seg'
+        except Exception:
+            return False, ms, 'sub-fail'
     except Exception as e:
         return False, 0, type(e).__name__
 
