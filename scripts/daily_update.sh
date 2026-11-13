@@ -82,7 +82,7 @@ python3 pipeline/judge.py >/dev/null 2>&1 && python3 builders/build_groups.py \
   || echo "  !! 分组生成失败，沿用上一版 adult/other"
 
 # 7c) 两组聚合站点：服务端把同一组的几十个源合成一个 type:1 站点
-#     two.json 的 sites 只有两条（其它 / 成人资源），配置本体 200KB 级
+#     two.json 的 sites 只有两条（影视资源 / 成人资源），配置本体 200KB 级
 echo "--- [7c] 生成聚合站点 two.json + agg_srcs.json"
 python3 builders/build_agg.py && python3 builders/build_two.py \
   || echo "  !! 聚合站点生成失败，沿用上一版"

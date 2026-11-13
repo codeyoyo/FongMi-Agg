@@ -194,6 +194,11 @@ def main():
             print(f'   {b}: 认 t {m.get("t", 0)} 源 / 只能全量 {m.get("all", 0)} 源')
 
     save_cache()
+    # 自检：抓取抖动时可能所有源都失败，这时宁可保留上一版，也不能写一个空订阅出去
+    n_other = len({s['api'] for b in out.get('other', {}).get('buckets', []) for s in b['srcs']})
+    n_adult = len({s['api'] for b in out.get('adult', {}).get('buckets', []) for s in b['srcs']})
+    if n_other < 5 or n_adult < 3:
+        raise SystemExit(f'!! 源数异常（other={n_other} adult={n_adult}），保留上一版 agg_srcs.json')
     json.dump(out, open(os.path.join(DIST, 'agg_srcs.json'), 'w'), ensure_ascii=False)
     print('→ dist2/agg_srcs.json', os.path.getsize(os.path.join(DIST, 'agg_srcs.json')), 'B')
 
