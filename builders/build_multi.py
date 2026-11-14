@@ -26,6 +26,7 @@ def main():
         except Exception as e:
             bad.append(f"{name}({type(e).__name__})")
             continue
+        text = text.lstrip('\ufeff')
         if not (text.startswith('{') or text.startswith('//') or ',' in text.splitlines()[0]):
             bad.append(f'{name}(非配置)')
             continue

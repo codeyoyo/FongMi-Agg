@@ -224,7 +224,7 @@ def parse_config(url, src, depth=0, seen=None):
         text = fetch(url)
     except Exception as e:
         return [], [], [f'{src}: {type(e).__name__}']
-    t = strip_comments(text).strip()
+    t = strip_comments(text).lstrip('\ufeff').strip()   # 去 BOM：'\ufeff{' 会让 startswith('{') 失败，整份配置被当 TXT 丢掉
     if t.startswith('{'):
         d = None
         try:
