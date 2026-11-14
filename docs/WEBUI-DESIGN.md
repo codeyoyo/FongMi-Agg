@@ -267,3 +267,21 @@ P0 就能替代「让你天天来问我跑一次」这件事——这才是这�
 1. **域名**：新开 `fe.le138.cc.cd`？还是塞进现有 `fm.le138.cc.cd/admin`？
 2. **暴露范围**：应用自带单用户登录后上公网，还是只在内网/本机用（不上隧道）？
 3. **范围**：先做 P0（半天，能跑能看），还是 P0+P1 一起（一天，能编辑源）？
+
+---
+
+## 12. 实施进度（2026-11-14）
+
+| 项 | 状态 | 证据 |
+|---|---|---|
+| 8 步拆分 + `run_step.py` | ✅ 已上线 | commit 3a00a37；`--steps 07_build` 实测 110.6 s，counters 与手工跑一致 |
+| P0 仪表盘 / 源只读 / 产物 / 历史 | ✅ | `http://127.0.0.1:8123`（仅回环），`health.sh` VERDICT OK |
+| P0 一键运行 | ✅ | 页面按钮 → run_id `20261114-050738`，clean198/full220/basic44/multi20 |
+| P1 批量加源（预检 + 写入 + 删除） | ✅ | 预检：`szyyds.cn/tv/x.json` → 16 采集 + 6 js；`hgyx.json` → 6 采集 + 1 js；失效地址判 false |
+| P1 写盘安全 | ✅ | add→delete 往返后文件与原始逐字节一致；每次写入自动 git commit 可 revert |
+| P2 分类编辑 / 交集校验 / 回滚 | ⬜ | 未做 |
+| P3 定时调度 + 通知 | ⬜ | 未做 |
+| 公网暴露 | ⬜ **等拍板** | 现仅 `127.0.0.1:8123`；方案：新域名 `fe.le138.cc.cd` 或并入 `fm.le138.cc.cd/admin` |
+
+管理台本体在 `/app/working/fongmi-admin`（不进本仓库）：
+`bin/admin.sh start|stop|restart|status`、`bin/health.sh`、`bin/serve.py`（自己写 pid，避免 `pgrep -f` 误匹配命令行）。
