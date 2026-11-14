@@ -102,7 +102,7 @@ def test_source(url):
 
 
 if __name__ == '__main__':
-    probe = json.load(open('/app/working/fongmi-agg/clbug_live_probe.json'))
+    probe = json.load(open('/app/working/fongmi-agg/debug/clbug_live_probe.json'))
     ok = [p for p in probe if p['ok'] and p['ch'] >= 400 and not p['url'].startswith('http://127.')]
     ok.sort(key=lambda x: -x['ch'])
     print(f'候选源（频道≥400 且非本地）: {len(ok)}\n')
@@ -116,4 +116,4 @@ if __name__ == '__main__':
     print(f'\n通过抽样（≥40% 可播）: {len(keep)}')
     for k in keep:
         print(f"  {k['ch']:>5}频道 {k['rate']:.0%}  {k['name'][:20]:22} {k['url'][:56]}")
-    json.dump(keep, open('/app/working/fongmi-agg/clbug_live_kept.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(keep, open('/app/working/fongmi-agg/debug/clbug_live_kept.json', 'w'), ensure_ascii=False, indent=1)

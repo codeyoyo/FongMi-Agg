@@ -86,6 +86,6 @@ if __name__ == '__main__':
     for r in [x for x in res if not x['ok']][:40]:
         print(f"  {r['idx']:>3} {r['name'][:14]:16} http={r['http']} {r['err']:<18} {r['url'][:52]}")
     json.dump([{k: v for k, v in r.items() if k != 'cfg'} for r in res],
-              open('/app/working/fongmi-agg/clbug_sources.json', 'w'), ensure_ascii=False, indent=1)
+              open('/app/working/fongmi-agg/debug/clbug_sources.json', 'w'), ensure_ascii=False, indent=1)
     json.dump([{'name': r['name'], 'url': r['url'], 'cfg': r['cfg']} for r in ok],
-              open('/app/working/fongmi-agg/clbug_cfgs.json', 'w'), ensure_ascii=False)
+              open('/app/working/fongmi-agg/debug/clbug_cfgs.json', 'w'), ensure_ascii=False)

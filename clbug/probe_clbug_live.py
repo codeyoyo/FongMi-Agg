@@ -58,7 +58,7 @@ def probe(item):
 
 
 if __name__ == '__main__':
-    lives = json.load(open('/app/working/fongmi-agg/clbug_lives.json'))
+    lives = json.load(open('/app/working/fongmi-agg/debug/clbug_lives.json'))
     print(f'待测 {len(lives)} 个直播源\n')
     with cf.ThreadPoolExecutor(12) as ex:
         res = list(ex.map(probe, lives))
@@ -70,4 +70,4 @@ if __name__ == '__main__':
     print('\n--- 失败 ---')
     for r in [x for x in res if not x['ok']][:20]:
         print(f"  {r['name'][:18]:20} {r['err']:<20} {r['url'][:52]}")
-    json.dump(res, open('/app/working/fongmi-agg/clbug_live_probe.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(res, open('/app/working/fongmi-agg/debug/clbug_live_probe.json', 'w'), ensure_ascii=False, indent=1)

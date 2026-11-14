@@ -127,7 +127,7 @@ def evaluate(s):
 
 
 if __name__ == '__main__':
-    probe = json.load(open('/app/working/fongmi-agg/clbug_probe.json'))
+    probe = json.load(open('/app/working/fongmi-agg/debug/clbug_probe.json'))
     passed = [p for p in probe if p['ok']]
     # 先按站名粗筛成人
     clean_name = [p for p in passed if not is_adult_name(p['name'])]
@@ -164,4 +164,4 @@ if __name__ == '__main__':
     for r in bad:
         print(f"  {r['name'][:24]:26} {r['reason']}")
 
-    json.dump(good, open('/app/working/fongmi-agg/clbug_clean.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(good, open('/app/working/fongmi-agg/debug/clbug_clean.json', 'w'), ensure_ascii=False, indent=1)

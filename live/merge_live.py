@@ -54,7 +54,7 @@ def parse(text):
 
 
 if __name__ == '__main__':
-    kept = json.load(open('/app/working/fongmi-agg/clbug_live_kept.json'))
+    kept = json.load(open('/app/working/fongmi-agg/debug/clbug_live_kept.json'))
     # 补上 Guovin / iptv-org
     kept += [
         {'name': 'Guovin', 'url': 'https://cdn.jsdelivr.net/gh/Guovin/iptv-api@gd/output/result.m3u'},

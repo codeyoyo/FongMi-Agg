@@ -62,7 +62,7 @@ def probe(s):
 
 
 if __name__ == '__main__':
-    raw = json.load(open('/app/working/fongmi-agg/clbug_http_sites.json'))
+    raw = json.load(open('/app/working/fongmi-agg/debug/clbug_http_sites.json'))
     # 按完整 api 去重
     seen, uniq = {}, []
     for s in raw:
@@ -88,4 +88,4 @@ if __name__ == '__main__':
     for r in fails[:20]:
         print(f"  {r['name'][:20]:22} {r['err']:<15} {r['api'][:55]}")
 
-    json.dump(res, open('/app/working/fongmi-agg/clbug_probe.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(res, open('/app/working/fongmi-agg/debug/clbug_probe.json', 'w'), ensure_ascii=False, indent=1)

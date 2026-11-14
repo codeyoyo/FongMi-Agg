@@ -41,7 +41,7 @@ vr = {x['name']: x for x in json.load(open('state/verify_result.json'))}
 old = [x for x in json.load(open('state/sites_clean.json'))
        if all((vr.get(x['name']) or {}).get(k) for k in ('L1','L2','L3'))]
 new = [{'name': s['name'].strip(), 'type': s['type'], 'api': s['api'],
-        '_total': s['total'], '_src': 'clbug'} for s in json.load(open('clbug_clean.json'))]
+        '_total': s['total'], '_src': 'clbug'} for s in json.load(open('debug/clbug_clean.json'))]
 pool, seen = [], set()
 for s in old + new:
     s = dict(s); s.setdefault('_src', 'old')
