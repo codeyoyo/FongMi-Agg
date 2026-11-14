@@ -25,6 +25,10 @@ import argparse, json, os, subprocess, sys, time, datetime
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STEPS_DIR = os.path.join(BASE, 'scripts', 'steps')
 RUNS = os.path.join(BASE, 'state', 'runs')
+SNAPS = os.path.join(BASE, 'state', 'snapshots')
+DIST2 = os.path.join(BASE, 'dist2')
+SNAP_FILES = ('fongmi.json', 'clean.json', 'full.json', 'basic.json',
+              'two.json', 'multi.json', 'adult.json', 'other.json', 'agg_srcs.json')
 
 ORDER = ['01_fetch', '02_probe', '03_dedupe', '04_classify',
          '05_verify', '06_search', '07_build', '08_deploy']
@@ -40,6 +44,41 @@ def step_path(step):
 
 def list_steps():
     return [s for s in ORDER if os.path.exists(step_path(s))]
+
+
+
+def snapshot(run_id, tag='build'):
+    """把当前 dist2 产物存一份还原点；返回快照 id（失败不阻断流水线）"""
+    import hashlib, shutil
+    try:
+        sid = datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + tag
+        dst = os.path.join(SNAPS, sid)
+        os.makedirs(dst, exist_ok=True)
+        meta = {'id': sid, 'run_id': run_id, 'created': now(), 'files': {}}
+        for f in SNAP_FILES:
+            src = os.path.join(DIST2, f)
+            if not os.path.isfile(src):
+                continue
+            shutil.copy2(src, os.path.join(dst, f))
+            raw = open(src, 'rb').read()
+            try:
+                d = json.loads(raw)
+                n = len(d.get('urls') or d.get('sites') or d) if isinstance(d, (dict, list)) else None
+            except Exception:
+                n = None
+            meta['files'][f] = {'bytes': len(raw), 'count': n,
+                                'sha256': hashlib.sha256(raw).hexdigest()[:16]}
+        with open(os.path.join(dst, 'meta.json'), 'w', encoding='utf-8') as fh:
+            json.dump(meta, fh, ensure_ascii=False, indent=1)
+        keep = 20
+        olds = sorted(d for d in os.listdir(SNAPS) if os.path.isdir(os.path.join(SNAPS, d)))
+        for d in olds[:-keep]:
+            shutil.rmtree(os.path.join(SNAPS, d), ignore_errors=True)
+        print(f'--- 快照 {sid}（{len(meta["files"])} 个产物）')
+        return sid
+    except Exception as e:
+        print(f'!! 快照失败（不阻断）：{e}')
+        return None
 
 
 def run_one(run_id, step, extra_env=None):
@@ -82,6 +121,12 @@ def run_one(run_id, step, extra_env=None):
     with open(jsf, 'w', encoding='utf-8') as fh:
         json.dump(rec, fh, ensure_ascii=False, indent=1)
     print(f"\n=== {step} rc={rc} ({rec['class']}) {rec['duration_ms']}ms {counters}")
+    if step == '07_build' and rc == 0:
+        sid = snapshot(run_id, tag='build')
+        if sid:
+            rec['snapshot'] = sid
+            with open(jsf, 'w', encoding='utf-8') as fh:
+                json.dump(rec, fh, ensure_ascii=False, indent=1)
     return rec
 
 
