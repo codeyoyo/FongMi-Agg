@@ -1,75 +1,545 @@
 {
-  "_readme": "统一源入口。三种类型分别进入不同流水线，格式见下。改这个文件即可，不用动脚本。",
-  "_format": {
-    "vod": "点播配置（TVBox JSON / TXT）。拉取后解析出 type 0/1/4 的站点并入采集站池，再走测活→分类→播放实测。type 3 的 jar/js 爬虫会被跳过。",
-    "live": "直播列表（m3u 或 txt）。解析后并入直播池，再走测活→分组。",
-    "intl": "单条境外频道。字段 name/url/cc，由 probe_intl.py 每日测活。"
+ "_readme": "统一源入口。三种类型分别进入不同流水线，格式见下。改这个文件即可，不用动脚本。",
+ "_format": {
+  "vod": "点播配置（TVBox JSON / TXT）。拉取后解析出 type 0/1/4 的站点并入采集站池，再走测活→分类→播放实测。type 3 的 jar/js 爬虫会被跳过。",
+  "live": "直播列表（m3u 或 txt）。解析后并入直播池，再走测活→分组。",
+  "intl": "单条境外频道。字段 name/url/cc，由 probe_intl.py 每日测活。"
+ },
+ "vod": [
+  {
+   "name": "乔记",
+   "url": "http://cdn.qiaoji8.com/tvbox.json",
+   "src": "ysy"
   },
-
-  "vod": [
-    {"name": "乔记", "url": "http://cdn.qiaoji8.com/tvbox.json", "src": "ysy"},
-    {"name": "肥猫", "url": "http://fmys.top/fmys.json", "src": "ysy"},
-    {"name": "君狄", "url": "http://home.jundie.top:81/top98.json", "src": "ysy"},
-    {"name": "喵TV", "url": "http://www.meowtv.vip/tvbox.json", "src": "ysy"},
-    {"name": "星河", "url": "http://xhztv.top/4k.json", "src": "ysy"},
-    {"name": "kstore-newwex", "url": "https://9280.kstore.vip/newwex.json", "src": "ysy"},
-    {"name": "kstore-AnotherDS", "url": "https://9877.kstore.space/AnotherDS/api.json", "src": "ysy"},
-    {"name": "kstore-ONE", "url": "https://9877.kstore.space/ONE/one.json", "src": "ysy"},
-    {"name": "lushunming", "url": "https://android.lushunming.qzz.io/json/index.json", "src": "ysy"},
-    {"name": "hgyx", "url": "https://api.hgyx.vip/hgyx.json", "src": "ysy"},
-    {"name": "xduo-xpg", "url": "https://bitbucket.org/xduo/duoapi/raw/master/xpg.json", "src": "ysy"},
-    {"name": "xduo-libs", "url": "https://cdn.gitmirror.com/bb/xduo/libs/master/index.json", "src": "ysy"},
-    {"name": "dxawi", "url": "https://dxawi.github.io/0/0.json", "src": "ysy"},
-    {"name": "天神IY", "url": "https://gitee.com/cpu-iy/iy/raw/master/%E5%A4%A9%E7%A5%9EIY.json", "src": "ysy"},
-    {"name": "free-kingdom-T4", "url": "https://gitee.com/free-kingdom/dc/raw/main/T4.json", "src": "ysy"},
-    {"name": "dongliTV", "url": "https://raw.githubusercontent.com/chitue/dongliTV/main/api.json", "src": "ysy"},
-    {"name": "YGBH-vip2", "url": "https://raw.githubusercontent.com/guot55/YGBH/main/vip2.json", "src": "ysy"},
-    {"name": "maoystv", "url": "https://raw.githubusercontent.com/maoystv/6/main/000.json", "src": "ysy"},
-    {"name": "XYQTVBox", "url": "https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json", "src": "ysy"},
-    {"name": "yoursmile-XC", "url": "https://raw.githubusercontent.com/yoursmile66/TVBox/main/XC.json", "src": "ysy"},
-    {"name": "252035-FongMi", "url": "https://www.252035.xyz/z/FongMi.json", "src": "ysy"},
-    {"name": "yingm-dm", "url": "https://www.yingm.cc/dm/dm.json", "src": "ysy"},
-    {"name": "FreeSpider", "url": "https://cnb.cool/aooooowuuuuu/FreeSpider/-/git/raw/main/config", "src": "ysy"},
-    {"name": "duanju", "url": "https://cnb.cool/fish2018/duanju/-/git/raw/main/tvbox.json", "src": "ysy"},
-    {"name": "xhztv-DC", "url": "http://xhztv.top/DC.txt", "src": "ysy"},
-    {"name": "ok213", "url": "http://ok213.top/tv", "src": "ysy"},
-    {"name": "iyouhun-dc", "url": "https://www.iyouhun.com/tv/dc", "src": "ysy"},
-    {"name": "iyouhun-yh", "url": "https://www.iyouhun.com/tv/yh", "src": "ysy"},
-    {"name": "anna-nxog", "url": "https://xn--anna-wn6lw489o.v.nxog.top/m/", "src": "ysy"},
-    {"name": "ayang", "url": "https://um.ayang.nyc.mn", "src": "ysy"},
-    {"name": "zy-89729981", "url": "https://zy.89729981.xyz/", "src": "ysy"},
-    {"name": "dh-89729981", "url": "https://dh.89729981.xyz/", "src": "ysy"}
-  ],
-
-  "live": [
-    {"name": "epg-hk", "url": "https://epg.pw/test_channels_hong_kong.m3u", "src": "ysy", "cc": "hk"},
-    {"name": "epg-mo", "url": "https://epg.pw/test_channels_macau.m3u", "src": "ysy", "cc": "mo"},
-    {"name": "epg-tw", "url": "https://epg.pw/test_channels_taiwan.m3u", "src": "ysy", "cc": "tw"},
-    {"name": "epg-my", "url": "https://epg.pw/test_channels_malaysia.m3u", "src": "ysy", "cc": "my"},
-    {"name": "epg-sg", "url": "https://epg.pw/test_channels_singapore.m3u", "src": "ysy", "cc": "sg"},
-    {"name": "epg-test", "url": "https://epg.pw/test_channels.m3u", "src": "ysy"},
-    {"name": "fanmingming-ipv6", "url": "https://live.fanmingming.cn/tv/m3u/ipv6.m3u", "src": "ysy"},
-    {"name": "freetv-douyu", "url": "https://live.freetv.top/douyuyqk.m3u", "src": "ysy"},
-    {"name": "freetv-huya", "url": "https://live.freetv.top/huyayqk.m3u", "src": "ysy"},
-    {"name": "zbds-ipv4", "url": "https://live.zbds.top/tv/iptv4.m3u", "src": "ysy"},
-    {"name": "zbds-ipv4-txt", "url": "https://live.zbds.top/tv/iptv4.txt", "src": "ysy"},
-    {"name": "zbds-ipv6", "url": "https://live.zbds.top/tv/iptv6.m3u", "src": "ysy"},
-    {"name": "Guovin-ipv4", "url": "https://raw.githubusercontent.com/Guovin/iptv-api/gd/output/ipv4/result.m3u", "src": "ysy"},
-    {"name": "Guovin-ipv6", "url": "https://raw.githubusercontent.com/Guovin/iptv-api/gd/output/ipv6/result.m3u", "src": "ysy"},
-    {"name": "suxuang-ipv4", "url": "https://raw.githubusercontent.com/suxuang/myIPTV/refs/heads/main/ipv4.m3u", "src": "ysy"},
-    {"name": "PizazzGY", "url": "https://raw.githubusercontent.com/PizazzGY/TV/master/output/user_result.m3u", "src": "ysy"},
-    {"name": "YueChan", "url": "https://raw.githubusercontent.com/YueChan/Live/main/IPTV.m3u", "src": "ysy"},
-    {"name": "BurningC4", "url": "https://raw.githubusercontent.com/BurningC4/Chinese-IPTV/master/TV-IPV4.m3u", "src": "ysy"},
-    {"name": "vamoschuck", "url": "https://raw.githubusercontent.com/vamoschuck/TV/main/M3U", "src": "ysy"},
-    {"name": "BigBigGrandG", "url": "https://raw.githubusercontent.com/BigBigGrandG/IPTV-URL/release/Gather.m3u", "src": "ysy"},
-    {"name": "Kimentanm", "url": "https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u", "src": "ysy"},
-    {"name": "FreeTV-IPTV", "url": "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8", "src": "ysy"},
-    {"name": "jackTV", "url": "https://php.946985.filegear-sg.me/jackTV.m3u", "src": "ysy"},
-    {"name": "gongdian-bili", "url": "https://gongdian.top/tv/Mursor/bililive.m3u", "src": "ysy"},
-    {"name": "gongdian-yy", "url": "https://gongdian.top/tv/Mursor/yylunbo.m3u", "src": "ysy"},
-    {"name": "utako-jp", "url": "https://web.utako.moe/jp.m3u", "src": "ysy", "cc": "jp"},
-    {"name": "iptv-org-tw", "url": "https://iptv-org.github.io/iptv/countries/tw.m3u", "src": "ysy", "cc": "tw"}
-  ],
-
-  "intl": []
+  {
+   "name": "肥猫",
+   "url": "http://fmys.top/fmys.json",
+   "src": "ysy"
+  },
+  {
+   "name": "君狄",
+   "url": "http://home.jundie.top:81/top98.json",
+   "src": "ysy"
+  },
+  {
+   "name": "喵TV",
+   "url": "http://www.meowtv.vip/tvbox.json",
+   "src": "ysy"
+  },
+  {
+   "name": "星河",
+   "url": "http://xhztv.top/4k.json",
+   "src": "ysy"
+  },
+  {
+   "name": "kstore-newwex",
+   "url": "https://9280.kstore.vip/newwex.json",
+   "src": "ysy"
+  },
+  {
+   "name": "kstore-AnotherDS",
+   "url": "https://9877.kstore.space/AnotherDS/api.json",
+   "src": "ysy"
+  },
+  {
+   "name": "kstore-ONE",
+   "url": "https://9877.kstore.space/ONE/one.json",
+   "src": "ysy"
+  },
+  {
+   "name": "lushunming",
+   "url": "https://android.lushunming.qzz.io/json/index.json",
+   "src": "ysy"
+  },
+  {
+   "name": "hgyx",
+   "url": "https://api.hgyx.vip/hgyx.json",
+   "src": "ysy"
+  },
+  {
+   "name": "xduo-xpg",
+   "url": "https://bitbucket.org/xduo/duoapi/raw/master/xpg.json",
+   "src": "ysy"
+  },
+  {
+   "name": "xduo-libs",
+   "url": "https://cdn.gitmirror.com/bb/xduo/libs/master/index.json",
+   "src": "ysy"
+  },
+  {
+   "name": "dxawi",
+   "url": "https://dxawi.github.io/0/0.json",
+   "src": "ysy"
+  },
+  {
+   "name": "天神IY",
+   "url": "https://gitee.com/cpu-iy/iy/raw/master/%E5%A4%A9%E7%A5%9EIY.json",
+   "src": "ysy"
+  },
+  {
+   "name": "free-kingdom-T4",
+   "url": "https://gitee.com/free-kingdom/dc/raw/main/T4.json",
+   "src": "ysy"
+  },
+  {
+   "name": "dongliTV",
+   "url": "https://raw.githubusercontent.com/chitue/dongliTV/main/api.json",
+   "src": "ysy"
+  },
+  {
+   "name": "YGBH-vip2",
+   "url": "https://raw.githubusercontent.com/guot55/YGBH/main/vip2.json",
+   "src": "ysy"
+  },
+  {
+   "name": "maoystv",
+   "url": "https://raw.githubusercontent.com/maoystv/6/main/000.json",
+   "src": "ysy"
+  },
+  {
+   "name": "XYQTVBox",
+   "url": "https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json",
+   "src": "ysy"
+  },
+  {
+   "name": "yoursmile-XC",
+   "url": "https://raw.githubusercontent.com/yoursmile66/TVBox/main/XC.json",
+   "src": "ysy"
+  },
+  {
+   "name": "252035-FongMi",
+   "url": "https://www.252035.xyz/z/FongMi.json",
+   "src": "ysy"
+  },
+  {
+   "name": "yingm-dm",
+   "url": "https://www.yingm.cc/dm/dm.json",
+   "src": "ysy"
+  },
+  {
+   "name": "FreeSpider",
+   "url": "https://cnb.cool/aooooowuuuuu/FreeSpider/-/git/raw/main/config",
+   "src": "ysy"
+  },
+  {
+   "name": "duanju",
+   "url": "https://cnb.cool/fish2018/duanju/-/git/raw/main/tvbox.json",
+   "src": "ysy"
+  },
+  {
+   "name": "xhztv-DC",
+   "url": "http://xhztv.top/DC.txt",
+   "src": "ysy"
+  },
+  {
+   "name": "ok213",
+   "url": "http://ok213.top/tv",
+   "src": "ysy"
+  },
+  {
+   "name": "iyouhun-dc",
+   "url": "https://www.iyouhun.com/tv/dc",
+   "src": "ysy"
+  },
+  {
+   "name": "iyouhun-yh",
+   "url": "https://www.iyouhun.com/tv/yh",
+   "src": "ysy"
+  },
+  {
+   "name": "anna-nxog",
+   "url": "https://xn--anna-wn6lw489o.v.nxog.top/m/",
+   "src": "ysy"
+  },
+  {
+   "name": "ayang",
+   "url": "https://um.ayang.nyc.mn",
+   "src": "ysy"
+  },
+  {
+   "name": "zy-89729981",
+   "url": "https://zy.89729981.xyz/",
+   "src": "ysy"
+  },
+  {
+   "name": "dh-89729981",
+   "url": "https://dh.89729981.xyz/",
+   "src": "ysy"
+  },
+  {
+   "name": "🏰应用多多",
+   "url": "https://jihulab.com/duomv/apps/-/raw/main/fast.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏰欧歌",
+   "url": "http://tv.nxog.top/api.php?mz=xb&id=1&b=欧歌",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏰云星日记",
+   "url": "http://jk.itvbox.cc:66/可视TV/云星日记/仓库/api.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏰吾爱多仓",
+   "url": "http://52bsj.vip:98/wuaihouse",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏡应用多多家庭版",
+   "url": "http://yydsys.top/duo",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏡应用多多备用",
+   "url": "http://cdn.yydsys.top/duo",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀阿里精品专线",
+   "url": "http://yydsys.top/duo/ali",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀饭太硬线路",
+   "url": "http://饭太硬.ml/tv",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀肥猫线路",
+   "url": "http://我不是.肥猫.love:63/接口禁止贩卖",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀唐三线路",
+   "url": "https://gh.t4tv.hz.cz/newtang.bmp",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀蜂蜜线路",
+   "url": "https://ghproxy.com/https://raw.githubusercontent.com/FongMi/CatVodSpider/main/json/config.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀道长线路",
+   "url": "https://pastebin.com/raw/5NHaxyGR",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀菜妮丝线路",
+   "url": "https://tvbox.cainisi.cf",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀小米线路",
+   "url": "http://xhww.fun:63/小米/DEMO.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀霜辉月明",
+   "url": "https://ghproxy.com/https://raw.githubusercontent.com/lm317379829/PyramidStore/main/py.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀dxawi0线路",
+   "url": "https://xhdwc.tk/0",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀老刘备线路",
+   "url": "https://raw.liucn.cc/box/m.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🚀运输车(有跑马灯)",
+   "url": "https://weixine.net/ysc.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹潇洒线路",
+   "url": "https://la.kstore.space/download/2863/01.txt",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹南风线路",
+   "url": "https://agit.ai/Yoursmile7/TVBox/raw/branch/master/XC.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹蚂蚁论坛线路",
+   "url": "https://la.kstore.space/download/2883/0110.txt",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹月光宝盒",
+   "url": "https://jihulab.com/ygbh1/box/-/raw/main/%E6%9C%88%E5%85%89%E5%AE%9D%E7%9B%92",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹欧歌线路",
+   "url": "http://tv.nxog.top/m/111.php?ou=%E6%AC%A7%E6%AD%8C&mz=index2&xl=&jar=index2",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹吾爱线路",
+   "url": "http://52bsj.vip:98/wuai",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹喵影视线路",
+   "url": "http://miaotvs.cn/meow",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹源享家线路",
+   "url": "https://源享家.ml/23424",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹星辰线路",
+   "url": "http://8.210.232.168/xc.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹冰河线路",
+   "url": "https://ju.binghe.ga/4.txt",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎乱世线路",
+   "url": "http://www.dmtv.ml/mao/single.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎一影视线路",
+   "url": "https://ghproxy.com/https://raw.githubusercontent.com/tv-player/tvbox-line/main/tv/fj.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎佰欣园线路",
+   "url": "https://ghproxy.com/https://raw.githubusercontent.com/chengxueli818913/maoTV/main/44.txt",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎甜蜜线路",
+   "url": "https://ghproxy.com/https://raw.githubusercontent.com/kebedd69/TVbox-interface/main/%E7%94%9C%E8%9C%9C.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎一木线路",
+   "url": "https://ghproxy.com/https://raw.githubusercontent.com/xianyuyimu/TVBOX-/main/TVBox/%E4%B8%80%E6%9C%A8%E8%87%AA%E7%94%A8.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎kvymin线路",
+   "url": "https://agit.ai/kvymin/TV/raw/branch/master/Box.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎agit/abc线路",
+   "url": "https://agit.ai/n/b/raw/branch/a/b/c.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎zzz1线路",
+   "url": "https://agit.ai/mmmgit/tvbox/raw/branch/main/zzz1.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎小马线路",
+   "url": "https://szyyds.cn/tv/x.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏄️夜猫子(有跑马灯)",
+   "url": "https://download.kstore.space/download/3313/mao/ymz",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏄️荷城茶秀",
+   "url": "https://ghproxy.com/https://raw.githubusercontent.com/XiaoYiChaHang/tvbox/main/ysj.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏄️高天流云",
+   "url": "https://ghproxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏄️胖鸭线路",
+   "url": "https://agit.ai/cyl518/yl/raw/branch/master/ml.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏄️元兴线路",
+   "url": "https://freed.yuanhsing.cf/TVBox/meowcf.json",
+   "src": "cyuan"
+  },
+  {
+   "name": "🏄️小胡线路",
+   "url": "http://xzam.cn/tv",
+   "src": "cyuan"
+  }
+ ],
+ "live": [
+  {
+   "name": "epg-hk",
+   "url": "https://epg.pw/test_channels_hong_kong.m3u",
+   "src": "ysy",
+   "cc": "hk"
+  },
+  {
+   "name": "epg-mo",
+   "url": "https://epg.pw/test_channels_macau.m3u",
+   "src": "ysy",
+   "cc": "mo"
+  },
+  {
+   "name": "epg-tw",
+   "url": "https://epg.pw/test_channels_taiwan.m3u",
+   "src": "ysy",
+   "cc": "tw"
+  },
+  {
+   "name": "epg-my",
+   "url": "https://epg.pw/test_channels_malaysia.m3u",
+   "src": "ysy",
+   "cc": "my"
+  },
+  {
+   "name": "epg-sg",
+   "url": "https://epg.pw/test_channels_singapore.m3u",
+   "src": "ysy",
+   "cc": "sg"
+  },
+  {
+   "name": "epg-test",
+   "url": "https://epg.pw/test_channels.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "fanmingming-ipv6",
+   "url": "https://live.fanmingming.cn/tv/m3u/ipv6.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "freetv-douyu",
+   "url": "https://live.freetv.top/douyuyqk.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "freetv-huya",
+   "url": "https://live.freetv.top/huyayqk.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "zbds-ipv4",
+   "url": "https://live.zbds.top/tv/iptv4.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "zbds-ipv4-txt",
+   "url": "https://live.zbds.top/tv/iptv4.txt",
+   "src": "ysy"
+  },
+  {
+   "name": "zbds-ipv6",
+   "url": "https://live.zbds.top/tv/iptv6.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "Guovin-ipv4",
+   "url": "https://raw.githubusercontent.com/Guovin/iptv-api/gd/output/ipv4/result.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "Guovin-ipv6",
+   "url": "https://raw.githubusercontent.com/Guovin/iptv-api/gd/output/ipv6/result.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "suxuang-ipv4",
+   "url": "https://raw.githubusercontent.com/suxuang/myIPTV/refs/heads/main/ipv4.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "PizazzGY",
+   "url": "https://raw.githubusercontent.com/PizazzGY/TV/master/output/user_result.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "YueChan",
+   "url": "https://raw.githubusercontent.com/YueChan/Live/main/IPTV.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "BurningC4",
+   "url": "https://raw.githubusercontent.com/BurningC4/Chinese-IPTV/master/TV-IPV4.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "vamoschuck",
+   "url": "https://raw.githubusercontent.com/vamoschuck/TV/main/M3U",
+   "src": "ysy"
+  },
+  {
+   "name": "BigBigGrandG",
+   "url": "https://raw.githubusercontent.com/BigBigGrandG/IPTV-URL/release/Gather.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "Kimentanm",
+   "url": "https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "FreeTV-IPTV",
+   "url": "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8",
+   "src": "ysy"
+  },
+  {
+   "name": "jackTV",
+   "url": "https://php.946985.filegear-sg.me/jackTV.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "gongdian-bili",
+   "url": "https://gongdian.top/tv/Mursor/bililive.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "gongdian-yy",
+   "url": "https://gongdian.top/tv/Mursor/yylunbo.m3u",
+   "src": "ysy"
+  },
+  {
+   "name": "utako-jp",
+   "url": "https://web.utako.moe/jp.m3u",
+   "src": "ysy",
+   "cc": "jp"
+  },
+  {
+   "name": "iptv-org-tw",
+   "url": "https://iptv-org.github.io/iptv/countries/tw.m3u",
+   "src": "ysy",
+   "cc": "tw"
+  },
+  {
+   "name": "🐹云星日记",
+   "url": "http://itvbox.cc/tvbox/云星日记/1.m3u8",
+   "src": "cyuan"
+  },
+  {
+   "name": "🐹分享者线路",
+   "url": "https://agit.ai/66666/mao/raw/branch/master/00/000.m3u8",
+   "src": "cyuan"
+  },
+  {
+   "name": "💎不良帅线路",
+   "url": "https://notabug.org/qizhen15800/My9394/raw/master/ProfessionalEdition.m3u8",
+   "src": "cyuan"
+  }
+ ],
+ "intl": []
 }

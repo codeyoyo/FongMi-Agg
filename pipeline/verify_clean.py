@@ -13,11 +13,20 @@ import concurrent.futures as cf, json, re, sys, urllib.request, time
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 
 
-def get(url, timeout=12):
+def get(url, timeout=12, retries=2):
+    """带重试：本机出口代理偶发 SSL_ERROR_SYSCALL（约 1s 掉线），单次失败不代表源死。"""
     req = urllib.request.Request(url, headers=UA)
-    t0 = time.time()
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.status, r.read(200000).decode('utf-8', 'ignore'), (time.time() - t0) * 1000
+    last = None
+    for i in range(retries + 1):
+        t0 = time.time()
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.status, r.read(3000000).decode('utf-8', 'ignore'), (time.time() - t0) * 1000
+        except Exception as e:
+            last = e
+            if i < retries:
+                time.sleep(0.8)
+    raise last
 
 
 def parse_list(body, typ):
