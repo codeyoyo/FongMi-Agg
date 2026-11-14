@@ -346,7 +346,7 @@ async function handleCategory(g, bucketName, pg) {
       // 每个分类桶自带关键词（影视组和成人组各一套），不要共用同一张表
       const kws = (bucket && bucket.kws) || [];
       const xkws = (bucket && bucket.xkws) || [];
-      if (kws.length) {
+      if (kws.length || xkws.length) {
         const typed = items.filter((it) => String(it.type_name || '').trim());
         if (typed.length === 0) {
           // 这个站的列表接口不返回 type_name，没法判断，只能整批留下
@@ -358,6 +358,7 @@ async function handleCategory(g, bucketName, pg) {
           final = items.filter((it) => {
             const t = String(it.type_name || '');
             if (xkws.some((k) => t.includes(k))) return false;   // 排除词优先
+            if (!kws.length) return true;                        // 无正向词，只做排除
             return kws.some((k) => t.includes(k));
           });
         }
