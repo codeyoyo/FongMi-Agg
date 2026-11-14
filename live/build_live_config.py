@@ -134,7 +134,14 @@ def canon(name):
     ck = cctv_key(name)
     if ck:
         return ck
-    n = re.sub(r'[\s\-_·・]', '', name).lower()
+    n = (name or '').strip()
+    # 线路变体标签：字幕 / backup / 北美版 / [BD] / 「HK」 / 分辨率
+    n = re.sub(r'[「『\[\(（]\s*(?:webvtt|硬|中文|双语|雙語)?字幕\s*[」』\]\)）]', '', n, flags=re.I)
+    n = re.sub(r'^(?:\[BD\]|\[HD\]|\[4K\]|[「『]HK[」』])', '', n)
+    n = re.sub(r'\s*(?:backup|备份|備份)$', '', n, flags=re.I)
+    n = re.sub(r'北美版$', '', n)
+    n = re.sub(r'[「『\[\(（]\s*(?:720p|1080p|2160p|4k|8k|hd|sd)\s*[」』\]\)）]', '', n, flags=re.I)
+    n = re.sub(r'[\s\-_·・]', '', n).lower()
     for w in NOISE:
         n = n.replace(w, '')
     return n
@@ -146,6 +153,7 @@ def pick_channels(merged, tested):
     tested_urls = {}
     for k, v in (tested or {}).items():
         tested_urls[k] = set(v.get('routes') or [])
+    tested_keys = set(tested_urls)
 
     # 先把同一频道的多个命名合并
     buckets = {}
@@ -171,10 +179,15 @@ def pick_channels(merged, tested):
         if not uniq:
             continue
         good = set()
+        tested_hit = False
         # 归并后的 key（cctv1）与原始 key（cctv-1综合）都要查
-        for k in list(b['keys']) + [b.get('ck')]:
+        for k in list(b['keys']) + [b.get('ck'), canon(b['name'])]:
             if k:
+                if k in tested_keys:
+                    tested_hit = True
                 good |= tested_urls.get(k, set())
+        if not good and tested_hit:
+            continue          # 测过但一条线路都不通 → 不进配置
         if good:
             # 有实测数据 → 只留能播的，并按实测耗时排
             measured = [r for r in uniq if r['url'] in good]
@@ -343,8 +356,7 @@ if __name__ == '__main__':
     ta = os.path.join(BASE, 'live_route_test_all.json')
     if os.path.exists(ta):
         for k, v in json.load(open(ta)).items():
-            if v.get('good'):
-                tested[k] = {'name': '', 'routes': [g['url'] for g in v['good']]}
+            tested[k] = {'name': '', 'routes': [g['url'] for g in (v.get('good') or [])]}
         print(f'  使用批量实测: {len(tested)} 个频道有可用线路')
     # 2) 早先的单频测试补充
     tp = os.path.join(BASE, 'live_tested_core.json')

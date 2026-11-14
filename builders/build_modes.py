@@ -10,7 +10,14 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
 
 base_cfg = json.load(open(os.path.join(BASE, 'backup', 'fongmi-pre-mode.json')))
-js_sites = [s for s in base_cfg['sites'] if s.get('ext')]
+_jsp = os.path.join(BASE, 'dist2', 'fongmi.json')
+if os.path.exists(_jsp):
+    try:
+        js_sites = [s for s in json.load(open(_jsp)).get('sites', []) if s.get('ext') or s.get('type') == 3]
+    except Exception:
+        js_sites = [s for s in base_cfg['sites'] if s.get('ext')]
+else:
+    js_sites = [s for s in base_cfg['sites'] if s.get('ext')]
 extra = {k: v for k, v in base_cfg.items() if k != 'sites'}
 
 all_api = json.load(open(os.path.join(BASE, 'ok_api_final.json')))

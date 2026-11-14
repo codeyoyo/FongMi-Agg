@@ -14,17 +14,26 @@ exec > >(tee -a "$LOG") 2>&1
 
 echo "===== $(date '+%F %T') 开始 ====="
 
-# 1) 拉最新采集站列表
+# 1) 拉最新采集站列表（含统一入口 manual_sources.json）
 echo "--- [1/8] 拉采集站列表"
 curl -sS -L -m 40 -o /tmp/zy.json \
   "https://raw.githubusercontent.com/hd9211/Tvbox1/main/zy.json" \
   || { echo "拉取失败，沿用上次列表"; [ -f /tmp/zy.json ] || exit 1; }
+echo "  统一入口加载："
+python3 -u pipeline/load_manual.py 2>&1 | grep -E "去重后|失败" | head -2
 python3 -c "
 import json
 d=json.load(open('/tmp/zy.json'))
 s=[x for x in (d.get('sites') or d) if x.get('type') in (0,1) and str(x.get('api','')).startswith('http')]
+try:
+    m=json.load(open('manual_vod_sites.json'))
+except Exception:
+    m=[]
+have={x['api'].rstrip('/') for x in s}
+add=[x for x in m if x['api'].rstrip('/') not in have]
+s += [{'name':x['name'],'api':x['api'],'type':x['type']} for x in add]
 json.dump(s,open('/tmp/zy_sites.json','w'),ensure_ascii=False)
-print(f'  采集站 {len(s)} 个')
+print(f'  采集站 {len(s)} 个（manual 新增 {len(add)}）')
 "
 
 # 2) 测活
@@ -97,6 +106,13 @@ python3 builders/play_probe.py >/dev/null 2>&1 \
 echo "--- [7c] 生成聚合站点 two.json + agg_srcs.json"
 python3 builders/build_agg.py && python3 builders/build_two.py \
   || echo "  !! 聚合站点生成失败，沿用上一版"
+
+# 7d) 多仓订阅：把统一入口里的外部配置收成一条 multi.json，
+#     FongMi 加这一条就能在配置列表里切换全部外部源（jar 站点由客户端自己跑）
+echo "--- [7d] 生成多仓 multi.json"
+python3 builders/build_multi.py 2>&1 | tail -2 \
+  && cp dist/multi.json dist2/multi.json \
+  || echo "  !! 多仓生成失败，沿用上一版"
 
 # 6) 部署
 if [ "$1" = "--no-deploy" ]; then

@@ -2,6 +2,34 @@
 
 从公开仓库收集 TVBox/FongMi 采集站 → 测活 → 内容分类 → 分组聚合 → 生成订阅 → 部署到 Cloudflare Pages。
 
+## 统一入口：`manual_sources.json`
+
+**加源只改这一个文件**，不用碰脚本。三类各走各的流水线：
+
+| 键 | 内容 | 流水线 |
+|---|---|---|
+| `vod` | 点播配置（TVBox JSON / 多仓索引 `{"urls":[...]}` / TXT） | `load_manual` → 提取 type 0/1/4 → 并入采集池 → 测活 → 分类 → 三层验证 |
+| `live` | 直播列表（m3u / txt） | `load_manual` → 解析频道 → 并入 `live_merged` → 线路测活 → 分组 |
+| `intl` | 单条境外频道（`name`/`url`/`cc`） | `live/probe_intl.py` 每日测活 |
+
+加一条：
+
+```json
+{"name": "某站", "url": "https://example.com/tvbox.json", "src": "manual"}
+```
+
+然后 `python3 pipeline/load_manual.py`（多仓索引会自动递归展开一层）。
+
+**重要**：TVBox 配置里 90%+ 是 `type: 3` 的 jar/js 爬虫，本机跑不了，`load_manual` 只保留 `type 0/1/4` 的纯 HTTP 站点。
+这些整份配置交给 `builders/build_multi.py` 收进 `multi.json`（多仓订阅）——FongMi 客户端自己能加载 jar，不需要我们测。
+
+```bash
+python3 builders/build_multi.py     # 探测可用配置 → dist2/multi.json
+```
+
+多仓地址 `https://fm.le138.de5.net/multi.json`，在 FongMi 配置页加这一条，列表里出现全部子配置。
+
+
 ## 目录结构
 
 ```

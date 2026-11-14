@@ -1,49 +1,5 @@
-# ===== 凭据 / 认证缓存（绝不提交）=====
-.wrangler/
-*.cf_token
-.cf_token
-.env
-.env.*
-*.pem
-*.key
-credentials*
-*secret*
-
-# ===== 构建产物 =====
-dist/
-dist2/
-*.zip
-__pycache__/
-*.pyc
-*.pyo
-
-# ===== 第三方运行时（约 20MB，用 npm 装）=====
-drpy/
-
-# ===== 数据 / 抓取缓存（脚本可重建，含第三方 token 与站点地址）=====
-backup/
-*.log
-logs/
-run/
-clbug_*.json
-kinds*.json
-classes_all.json
-play_probe.json
-search_timing.json
-live_merged.json
-live_groups.json
-ok_api_final.json
-sites_*.json
-probe_*.json
-api_probe*.json
-verify_*.json
-fongmi*.json
-*.db
-*.sqlite
-live_route_test_all.json
-live_tested_core.json
-ok_api.json
-ok_api_dedup.json
-search_probe.json
-
-.cf_account
+manual_live.json
+manual_vod_sites.json
+manual_js_sites.json
+drpy/out*/
+logs/*.log

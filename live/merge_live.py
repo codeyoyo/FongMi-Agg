@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """把通过抽样的直播源合并成「按频道名归并、每频道挂多线路」的结构"""
-import json, re, ssl, urllib.request, concurrent.futures as cf
+import json, os, re, ssl, urllib.request, concurrent.futures as cf
 from collections import defaultdict
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
@@ -77,6 +77,13 @@ if __name__ == '__main__':
 
     with cf.ThreadPoolExecutor(8) as ex:
         results = list(ex.map(get_one, srcs))
+
+    # 统一入口 manual_sources.json 的直播源（load_manual.py 已解析成频道级）
+    mp = '/app/working/fongmi-agg/manual_live.json'
+    if os.path.exists(mp):
+        manual = json.load(open(mp))
+        results.append(('manual', [(x['name'], x['url'], x.get('grp', '')) for x in manual]))
+        print(f'  {len(manual):>6} 频道  manual（统一入口）')
 
     by_name = defaultdict(list)
     total = 0
