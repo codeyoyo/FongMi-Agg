@@ -24,6 +24,8 @@ fi
 
 # Pages advanced mode 要求 _worker.js 在发布根目录
 cp deploy/_worker.js dist2/_worker.js
+# worker 运行时要读产物定义（?m=<id> 按产物过滤分类），必须随发布一起上传
+cp config/artifacts.json dist2/artifacts.json
 
 # wrangler.toml 是 Workers 版配置，pages deploy 时会干扰，临时移开
 [ -f wrangler.toml ] && mv wrangler.toml wrangler.toml.bak

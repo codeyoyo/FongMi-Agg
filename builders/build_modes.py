@@ -167,8 +167,31 @@ def load_artifacts():
 
 POOLS = {'clean': lambda: clean_api, 'full': lambda: all_api}
 
+AGG_BASE = os.environ.get('FONGMI_AGG_BASE', 'https://fm.le138.de5.net')
+
+
+def build_agg_artifact(a):
+    """聚合型产物：整份配置只挂一条 site，指向 /movie?m=<产物id>，
+    由 worker 按该产物勾选的分类过滤——勾哪些分类就只聚合哪些分类下的源。"""
+    aid = a['id']
+    fname = a.get('file') or (aid + '.json')
+    group = a.get('group') or 'movie'
+    api = f'{AGG_BASE}/{group}?m={aid}'
+    cfg = {'sites': [{'name': a.get('name') or aid, 'type': 1, 'api': api,
+                      'searchable': 1, 'quickSearch': 1, 'filterable': 0}],
+           'lives': LIVES if a.get('lives', True) else []}
+    cfg.update(extra)
+    outp = os.path.join(DIST, fname)
+    json.dump(cfg, open(outp, 'w'), ensure_ascii=False, indent=1)
+    print(f"{a.get('name') or aid:6} {fname:14} 聚合站 1 条 → {api}"
+          f"  分类 {a.get('buckets')}  文件 {os.path.getsize(outp)} B")
+
+
 for _a in load_artifacts():
     _fname = _a.get('file') or (_a['id'] + '.json')
+    if _a.get('type') == 'agg':
+        build_agg_artifact(_a)
+        continue
     _pool = POOLS.get(_a.get('pool', 'clean'))
     if not _pool:
         print(f"  !! 产物 {_a.get('id')} 的 pool={_a.get('pool')} 不认识，跳过")

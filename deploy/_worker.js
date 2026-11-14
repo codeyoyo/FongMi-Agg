@@ -191,6 +191,32 @@ async function loadGroup(env, origin, group) {
   return all[group] || null;
 }
 
+// 产物级分类过滤：?m=<产物id> 时只保留该产物勾选的分类桶
+// 未带 m、产物不存在、buckets=all → 原样返回（老行为不变）
+let __artsCache = null;
+async function loadArtifacts(env, origin) {
+  if (__artsCache) return __artsCache;
+  try {
+    const res = await env.ASSETS.fetch(new URL('/artifacts.json', origin));
+    if (!res.ok) return null;
+    __artsCache = await res.json();
+    return __artsCache;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function scopeByArtifact(g, env, origin, mode) {
+  if (!g || !mode) return g;
+  const arts = await loadArtifacts(env, origin);
+  const def = ((arts && arts.artifacts) || []).find((a) => a.id === mode || a.file === mode + '.json');
+  if (!def) return g;
+  const want = def.buckets;
+  if (want === 'all' || !Array.isArray(want)) return g;
+  const buckets = (g.buckets || []).filter((b) => want.indexOf(b.name) >= 0);
+  return { ...g, buckets };
+}
+
 const BUCKET_KWS = [
   ['电影', ['电影', '片']],
   ['电视剧', ['电视剧', '连续剧', '剧集', '剧']],
@@ -566,8 +592,10 @@ export default {
         return Response.redirect(url.origin + '/preview?g=' + (path === '/adult' ? 'adult' : 'other'), 302);
       }
       const group = path === '/adult' ? 'adult' : 'other';   // /movie 与 /other 同组
-      const g = await loadGroup(env, url.origin, group);
+      let g = await loadGroup(env, url.origin, group);
       if (!g) return json({ list: [] }, 500);
+      // ?m=<产物id>：只聚合该产物勾选的分类（未带则保持全部分类）
+      g = await scopeByArtifact(g, env, url.origin, url.searchParams.get('m'));
 
       const ac = (url.searchParams.get('ac') || '').toLowerCase();
       const wd = url.searchParams.get('wd');
