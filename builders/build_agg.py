@@ -59,6 +59,69 @@ GROUP_ORDER = {
     'adult': ['国产', '日本', '欧美', '动漫', '伦理', '其它'],
 }
 
+# ---------- 分类桶外置（GUI 可编辑） ----------
+# config/categories.json 存在时覆盖上面的内置常量；不存在则完全走内置，行为不变。
+CATEGORIES_FILE = os.environ.get('FONGMI_CATEGORIES') or os.path.join(BASE, 'config', 'categories.json')
+GROUP_XKWS = {'other': BUCKET_XKWS, 'adult': {}}
+
+
+def dump_categories():
+    """把当前内置分类导出成 config/categories.json（初始化用）"""
+    out = {'version': 1, 'note': 'GUI 可编辑；改完跑 07_build 生效', 'adult_kws': list(ADULT_KWS),
+           'groups': {}}
+    for g in ('other', 'adult'):
+        kws_map = dict(GROUP_BUCKETS[g])
+        xk = GROUP_XKWS.get(g) or {}
+        out['groups'][g] = {
+            'order': list(GROUP_ORDER[g]),
+            'buckets': [{'name': b, 'kws': kws_map.get(b, []), 'xkws': xk.get(b, [])}
+                        for b in GROUP_ORDER[g]],
+        }
+    with open(CATEGORIES_FILE, 'w', encoding='utf-8') as fh:
+        json.dump(out, fh, ensure_ascii=False, indent=1)
+    return CATEGORIES_FILE
+
+
+def load_categories():
+    """读外置分类；失败或缺文件时保持内置常量（绝不因为配置坏了就分类全丢）"""
+    global BUCKETS, GROUP_BUCKETS, GROUP_ORDER, BUCKET_XKWS, GROUP_XKWS, ADULT_KWS
+    if not os.path.exists(CATEGORIES_FILE):
+        return False
+    try:
+        cfg = json.load(open(CATEGORIES_FILE, encoding='utf-8'))
+        groups = cfg.get('groups') or {}
+        if not groups:
+            return False
+        new_gb, new_order, new_xk = {}, {}, {}
+        for g in ('other', 'adult'):
+            spec = groups.get(g) or {}
+            bl = spec.get('buckets') or []
+            names = [b['name'] for b in bl]
+            # 只有带正向关键词的桶参与匹配；空关键词的桶（如「其它」）只作为兜底/展示位，
+            # 这样外置配置与内置常量的匹配表完全等价
+            new_gb[g] = [(b['name'], list(b.get('kws') or [])) for b in bl if (b.get('kws') or [])]
+            new_order[g] = list(spec.get('order') or names)
+            new_xk[g] = {b['name']: list(b.get('xkws') or []) for b in bl if b.get('xkws')}
+            missing = set(new_order[g]) - set(names)
+            if missing:
+                print(f'  !! categories.json[{g}] 的 order 里有未定义的桶 {sorted(missing)}，用内置')
+                return False
+        if not new_gb.get('other'):
+            return False
+        BUCKETS = new_gb['other']
+        GROUP_BUCKETS = new_gb
+        GROUP_ORDER = new_order
+        GROUP_XKWS = new_xk
+        BUCKET_XKWS = new_xk.get('other', {})
+        if cfg.get('adult_kws'):
+            ADULT_KWS = tuple(cfg['adult_kws'])
+        print(f'  分类：使用 {os.path.relpath(CATEGORIES_FILE, BASE)}（other {len(new_gb["other"])} 桶 / adult {len(new_gb["adult"])} 桶）')
+        return True
+    except Exception as e:
+        print(f'  !! categories.json 解析失败，用内置分类：{e}')
+        return False
+
+
 MAX_SRC_PER_BUCKET = 18   # Cloudflare 每请求 subrequest 上限 50，留足余量
 
 
@@ -163,6 +226,7 @@ def bucket_of(name, table=None):
 
 
 def main():
+    load_categories()
     load_cache()
     kinds = json.load(open(os.path.join(BASE, 'state', 'kinds2.json')))
     with ThreadPoolExecutor(max_workers=8) as ex:
@@ -229,7 +293,7 @@ def main():
 
         order = GROUP_ORDER[grp]
         kws_map = dict(GROUP_BUCKETS[grp])
-        bl = [{'name': b, 'kws': kws_map.get(b, []), 'xkws': BUCKET_XKWS.get(b, []),
+        bl = [{'name': b, 'kws': kws_map.get(b, []), 'xkws': (GROUP_XKWS.get(grp) or {}).get(b, []),
                'srcs': buckets[b]} for b in order if buckets.get(b)]
         out[grp] = {'buckets': bl}
         print(f'{grp}: {len(srcs)} 源 → ' +
@@ -248,4 +312,8 @@ def main():
 
 
 if __name__ == '__main__':
+    import sys
+    if '--dump-categories' in sys.argv:
+        print('→', dump_categories())
+        raise SystemExit(0)
     main()
