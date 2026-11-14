@@ -163,6 +163,15 @@ lives[] → groups[] → channel[] → urls[]（"https://…/main.m3u8$主線"�
    本机测出的"死"不可信、"活"也可能只是碰巧。写结论时要标注这一点。
 9. **`emptyOutDir` 类构建**（前端那些）失败会放大成白屏，产物校验不能省。
 10. **容器 rebuild 会清 `/root`**，凭据只在 `/app/working` 里才活得下来。
+11. **移动数据文件后必须全仓扫引用，别只扫 `scripts/`**。2026-11-14 把 `clbug_*.json` 移进
+    `debug/` 时，第一轮只 grep 了 `clbug/` 和 `scripts/`，漏掉 `builders/build_modes.py`、
+    `pipeline/judge.py`、`pipeline/classify_all.py`、`pipeline/probe_classes.py` 四处，
+    结果 `daily_update.sh` 第 7b 步**静默失败**（`judge.py` 的 stderr 被判 `>/dev/null` 吞掉，
+    只留一行「分组生成失败，沿用上一版」）。扫描命令要覆盖全部代码目录：
+    ```bash
+    grep -rn "要移动的文件名" --include=*.py --include=*.sh . | grep -v node_modules
+    ```
+    并且**改完必须真跑一次完整流水线**——单跑某个脚本通过不代表 `daily_update.sh` 里能过。
 
 ---
 
