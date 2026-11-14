@@ -30,11 +30,6 @@
   "cc": "kr"
  },
  {
-  "name": "HLAM-DTV",
-  "url": "http://vod.mpmbc.co.kr:1935/live/encoder-tv/playlist.m3u8",
-  "cc": "kr"
- },
- {
   "name": "HLAO-DTV",
   "url": "http://211.33.246.4:32954/cj_live/myStream.sdp/playlist.m3u8",
   "cc": "kr"
