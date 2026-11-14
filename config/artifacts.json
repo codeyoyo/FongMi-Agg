@@ -2,6 +2,22 @@
  "note": "产物定义：GUI「产物」页可勾选每个产物包含哪些分类；改完需重跑 07 生成才生效。buckets 填 all 表示不限制。pool 可选 clean（三层全通池）/ full（全量池）。",
  "artifacts": [
   {
+   "id": "movie",
+   "file": "movie.json",
+   "name": "影视聚合",
+   "desc": "试验：聚合站，只聚合 电影+电视剧",
+   "type": "agg",
+   "group": "movie",
+   "pool": "clean",
+   "include_js": false,
+   "lives": false,
+   "buckets": [
+    "电影",
+    "电视剧"
+   ],
+   "enabled": true
+  },
+  {
    "id": "clean",
    "file": "clean.json",
    "name": "干净版",
