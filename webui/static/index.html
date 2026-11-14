@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FongMi 管理台</title>
+<style>
+  :root{--bg:#0f1216;--panel:#171c23;--line:#242c36;--fg:#dfe6ee;--dim:#8b98a8;--acc:#4da3ff;--ok:#3ecf8e;--warn:#f5a623;--bad:#ff5c5c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  header{display:flex;align-items:center;gap:18px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:9}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.5px}
+  nav{display:flex;gap:4px}
+  nav a{color:var(--dim);text-decoration:none;padding:6px 12px;border-radius:6px;font-size:13px}
+  nav a.on{color:#fff;background:#222c38}
+  main{padding:18px 20px;max-width:1180px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .card .k{color:var(--dim);font-size:12px}
+  .card .v{font-size:22px;font-weight:600;margin-top:2px}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+  th{color:var(--dim);font-weight:500;background:#1b2129}
+  tr:last-child td{border-bottom:none}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#9fd0ff;word-break:break-all}
+  .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.dim{color:var(--dim)}
+  button{background:#22303f;color:var(--fg);border:1px solid #2d3d4f;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}
+  button:hover{border-color:var(--acc)}
+  button.primary{background:#1a4b7a;border-color:#2b6fae}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  pre{background:#0b0e12;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;max-height:420px;font-size:12px;line-height:1.5}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  label{color:var(--dim);font-size:13px}
+  .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <h1>FongMi 管理台</h1>
+  <nav>
+    <a href="#" data-t="dash" class="on">仪表盘</a>
+    <a href="#" data-t="src">源</a>
+    <a href="#" data-t="cat">分类</a>
+    <a href="#" data-t="run">运行</a>
+    <a href="#" data-t="art">产物</a>
+    <a href="#" data-t="hist">历史</a>
+  </nav>
+  <span id="hint" class="dim" style="margin-left:auto;font-size:12px"></span>
+</header>
+<main>
+  <section id="dash"></section>
+  <section id="src" hidden></section>
+  <section id="cat" hidden></section>
+  <section id="run" hidden></section>
+  <section id="art" hidden></section>
+  <section id="hist" hidden></section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const api = (p, o) => fetch('/api' + p, o).then(r => r.json());
+const esc = s => String(s ?? '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+document.querySelectorAll('nav a').forEach(a => a.onclick = e => {
+  e.preventDefault();
+  document.querySelectorAll('nav a').forEach(x => x.classList.remove('on'));
+  a.classList.add('on');
+  ['dash','src','cat','run','art','hist'].forEach(t => $('#' + t).hidden = (t !== a.dataset.t));
+  load(a.dataset.t);
+});
+
+async function load(t){
+  if (t === 'dash') return renderDash();
+  if (t === 'src') return renderSrc();
+  if (t === 'cat') return renderCat();
+  if (t === 'art') return renderDefs();
+  if (t === 'hist') return renderHist();
+}
+
+function codeClass(c){ return c === 200 ? 'ok' : c ? 'warn' : 'bad'; }
+
+async function renderDash(){
+  const d = await api('/dashboard');
+  const a = d.artifacts, L = d.lives, R = d.last_run;
+  const pub = Object.entries(d.public || {}).map(([f, v]) =>
+    `<tr><td>${f}</td><td class="${codeClass(v.code)}">${v.code || 'ERR'}</td>
+     <td>${v.count ?? '-'}</td><td>${(v.bytes/1024).toFixed(0)} KB</td><td class="dim">${v.ms} ms</td></tr>`).join('');
+  $('#dash').innerHTML = `
+    <div class="cards">
+      <div class="card"><div class="k">干净版 clean</div><div class="v">${a.clean}</div><div class="k">${d.built_at['clean.json']||''}</div></div>
+      <div class="card"><div class="k">全量版 full</div><div class="v">${a.full}</div><div class="k">${d.built_at['full.json']||''}</div></div>
+      <div class="card"><div class="k">极简版 basic</div><div class="v">${a.basic}</div></div>
+      <div class="card"><div class="k">多仓 multi</div><div class="v">${a.multi}</div><div class="k">${d.built_at['multi.json']||''}</div></div>
+      <div class="card"><div class="k">直播</div><div class="v">${L.groups}<span class="dim" style="font-size:13px"> 组</span></div><div class="k">${L.channels} 个频道</div></div>
+    </div>
+    <h3 style="font-size:14px;margin:18px 0 8px">五分类</h3>
+    <div class="row">${(d.categories||[]).map(([n,c])=>`<span class="pill">${esc(n)} <b>${c}</b></span>`).join('') || '<span class="dim">未生成 agg_srcs.json</span>'}</div>
+    <h3 style="font-size:14px;margin:18px 0 8px">线上入口（${d.public ? '实测' : '-'}）</h3>
+    <table><tr><th>文件</th><th>状态</th><th>条数</th><th>大小</th><th>耗时</th></tr>${pub}</table>
+    <h3 style="font-size:14px;margin:18px 0 8px">上次运行</h3>
+    ${R ? `<table><tr><th>run</th><th>状态</th><th>开始</th><th>耗时</th><th>步骤</th></tr>
+      <tr><td><code>${R.run_id||''}</code></td><td class="${R.status==='ok'?'ok':R.status==='running'?'warn':'bad'}">${R.status||''}</td>
+      <td>${R.started||''}</td><td>${R.duration_ms?Math.round(R.duration_ms/1000)+' s':'-'}</td>
+      <td>${(R.steps||[]).map(s=>s.step||s).join(' → ')}</td></tr></table>` : '<p class="dim">还没有运行记录</p>'}
+    <p class="dim" style="margin-top:14px">注：本机为海外出口，测活判「死」的源可能是假阴性，不代表电视端不能用。</p>`;
+}
+
+let SRCKIND = 'vod';
+let PREVIEW = null;
+
+async function renderSrc(){
+  const d = await api('/sources');
+  const tabs = [['vod','点播配置'],['live','直播源'],['intl','境外/港澳台']].map(([k,t]) =>
+    `<button data-k="${k}" class="${k===SRCKIND?'primary':''}">${t} <b>${d.counts[k]}</b></button>`).join('');
+  const rows = (d[SRCKIND]||[]).map(x => `<tr>
+      <td>${esc(x.name)}</td>
+      <td><code>${esc(x.url)}</code></td>
+      <td class="dim">${esc(x.src)}</td>
+      <td style="width:44px">${SRCKIND==='intl' ? '<span class="dim">—</span>'
+        : `<a href="#" onclick="delSrc(${JSON.stringify(x.url)});return false" style="color:var(--bad)">删</a>`}</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="dim">空</td></tr>';
+  const importer = SRCKIND === 'intl' ? '<p class="dim">境外源请直接改 config/intl_channels.json（P2 再做图形化）。</p>' : `
+    <h3 style="font-size:14px;margin:18px 0 8px">批量加源（每行一个地址）</h3>
+    <textarea id="ta" rows="5" style="width:100%;background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,monospace;font-size:12px"
+      placeholder="https://example.com/tvbox.json&#10;https://example.com/another.json"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button id="btnPrev">预检（不写入）</button>
+      <button id="btnAdd" class="primary" disabled>写入</button>
+      <span id="impMsg" class="dim"></span>
+    </div>
+    <div id="prevBox"></div>`;
+  $('#src').innerHTML = `<div class="row">${tabs}</div>
+    <table><tr><th style="width:200px">名称</th><th>地址</th><th style="width:80px">来源</th><th></th></tr>${rows}</table>
+    ${importer}`;
+  document.querySelectorAll('#src button[data-k]').forEach(b => b.onclick = () => { SRCKIND = b.dataset.k; PREVIEW = null; renderSrc(); });
+  const bp = $('#btnPrev'); if (bp) bp.onclick = doPreview;
+  const ba = $('#btnAdd'); if (ba) ba.onclick = doAdd;
+}
+
+async function doPreview(){
+  const urls = ($('#ta').value || '').trim();
+  if (!urls) { $('#impMsg').textContent = '先粘几个地址'; return; }
+  $('#impMsg').textContent = '预检中…（会真的去拉一遍）';
+  const r = await fetch('/api/sources/preview', {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({kind: SRCKIND, urls})}).then(x => x.json()).catch(e => ({detail:String(e)}));
+  if (r.detail) { $('#impMsg').textContent = '失败：' + r.detail; return; }
+  PREVIEW = r;
+  const rows = r.items.map(x => `<tr>
+    <td><code>${esc(x.url)}</code></td>
+    <td class="${x.ok?'ok':'bad'}">${x.ok ? '可解析' : '失败'}</td>
+    <td>${x.sites ?? '-'}</td>
+    <td class="dim">${x.note ? esc(x.note) : (x.error ? esc(x.error.slice(0,80)) : ('采集 '+(x.types&&x.types[1]||0)+' / XML '+(x.types&&x.types[0]||0)+' / 扩展 '+(x.types&&x.types[4]||0)))}</td>
+  </tr>`).join('');
+  $('#prevBox').innerHTML = `<h3 style="font-size:14px;margin:16px 0 8px">预检结果：可用 ${r.summary.ok}/${r.summary.total}，识别站点 ${r.summary.sites}</h3>
+    <table><tr><th>地址</th><th>结果</th><th>站数</th><th>明细</th></tr>${rows}</table>`;
+  const okCount = r.items.filter(x => x.ok).length;
+  $('#btnAdd').disabled = okCount === 0;
+  $('#impMsg').textContent = okCount ? `确认无误后点「写入」` : '没有可写入的地址';
+}
+
+async function doAdd(){
+  if (!PREVIEW) return;
+  const items = PREVIEW.items.filter(x => x.ok).map(x => ({url: x.url, name: x.url.split('/').pop().slice(0,40)}));
+  if (!items.length) return;
+  const r = await fetch('/api/sources/add', {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({kind: SRCKIND, items})}).then(x => x.json()).catch(e => ({detail:String(e)}));
+  if (r.detail) { $('#impMsg').textContent = '失败：' + r.detail; return; }
+  $('#impMsg').textContent = `已写入 ${r.added} 条（重复跳过 ${r.duplicate}），当前共 ${r.total} 条`;
+  PREVIEW = null; renderSrc();
+}
+
+async function delSrc(url){
+  if (!confirm('删除这条源？\n' + url)) return;
+  const r = await fetch('/api/sources/delete', {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({kind: SRCKIND, url})}).then(x => x.json()).catch(e => ({detail:String(e)}));
+  if (r.detail) { alert('失败：' + r.detail); return; }
+  renderSrc();
+}
+
+let CAT = null;
+
+async function renderCat(){
+  if (!CAT) CAT = await api('/categories');
+  if (CAT.detail) { $('#cat').innerHTML = '<p class="bad">' + esc(CAT.detail) + '</p>'; return; }
+  const grp = (g, label) => {
+    const spec = CAT.groups[g] || {buckets: [], order: []};
+    const rows = spec.buckets.map((b, i) => `<tr>
+      <td style="width:110px"><input data-g="${g}" data-i="${i}" data-f="name" value="${esc(b.name)}"
+          style="width:100%;background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px"></td>
+      <td><input data-g="${g}" data-i="${i}" data-f="kws" value="${esc((b.kws||[]).join(' '))}" placeholder="空格分隔"
+          style="width:100%;background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px"></td>
+      <td><input data-g="${g}" data-i="${i}" data-f="xkws" value="${esc((b.xkws||[]).join(' '))}" placeholder="排除词"
+          style="width:100%;background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px"></td>
+      <td style="width:40px"><a href="#" onclick="delBucket('${g}',${i});return false" style="color:var(--bad)">删</a></td>
+    </tr>`).join('');
+    return `<h3 style="font-size:14px;margin:16px 0 8px">${label}（${spec.buckets.length} 桶）</h3>
+      <table><tr><th>桶名</th><th>正向关键词</th><th>排除词</th><th></th></tr>${rows}</table>
+      <div class="row" style="margin-top:8px"><button onclick="addBucket('${g}')">+ 加一个分类</button></div>`;
+  };
+  $('#cat').innerHTML = grp('other','影视资源组 other') + grp('adult','成人组 adult') + `
+    <div class="row" style="margin-top:16px">
+      <button class="primary" onclick="saveCat()">保存</button>
+      <button onclick="validateCat()">校验交集</button>
+      <span id="catMsg" class="dim"></span>
+    </div>
+    <div id="catRes"></div>
+    <p class="dim" style="margin-top:10px">正向关键词在两组内两两不得重复（这是分类串味的老病根），保存前会自动校验。
+    空关键词的桶永远不会收到内容，只当兜底位。改完需重跑「07 生成」才生效。</p>`;
+  document.querySelectorAll('#cat input').forEach(el => el.oninput = () => {
+    const b = CAT.groups[el.dataset.g].buckets[+el.dataset.i];
+    const f = el.dataset.f;
+    if (f === 'name') b.name = el.value.trim();
+    else {
+      b[f] = el.value.split(/[\s,，]+/).map(x => x.trim()).filter(Boolean);
+    }
+  });
+}
+
+function addBucket(g){
+  const spec = CAT.groups[g];
+  spec.buckets.push({name: '新分类' + (spec.buckets.length + 1), kws: [], xkws: []});
+  spec.order = spec.buckets.map(b => b.name);
+  CAT = JSON.parse(JSON.stringify(CAT)); renderCat();
+}
+function delBucket(g, i){
+  const spec = CAT.groups[g];
+  if (spec.buckets.length <= 1) return alert('至少留一个桶');
+  spec.buckets.splice(i, 1);
+  CAT.groups[g].order = spec.buckets.map(b => b.name);
+  CAT = JSON.parse(JSON.stringify(CAT)); renderCat();
+}
+function syncOrder(){
+  ['other','adult'].forEach(g => {
+    const spec = CAT.groups[g];
+    const names = spec.buckets.map(b => b.name);
+    spec.order = names.filter(n => spec.order.indexOf(n) >= 0).concat(names.filter(n => spec.order.indexOf(n) < 0));
+  });
+}
+async function validateCat(){
+  syncOrder();
+  const r = await fetch('/api/categories/validate', {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify(CAT)}).then(x => x.json()).catch(e => ({errors:[String(e)]}));
+  $('#catRes').innerHTML = (r.errors && r.errors.length
+      ? '<p class="bad">错误：<br>' + r.errors.map(esc).join('<br>') + '</p>' : '<p class="ok">交集校验通过</p>')
+    + ((r.warnings && r.warnings.length) ? '<p class="warn">提醒：<br>' + r.warnings.map(esc).join('<br>') + '</p>' : '');
+  return !(r.errors && r.errors.length);
+}
+async function saveCat(){
+  syncOrder();
+  const r = await fetch('/api/categories', {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify(CAT)}).then(x => x.json()).catch(e => ({detail:String(e)}));
+  if (r.detail) { $('#catMsg').innerHTML = '<span class="bad">保存失败：' + esc(r.detail) + '</span>'; return; }
+  $('#catMsg').innerHTML = '<span class="ok">已保存（git 已提交），重跑 07 生成后生效</span>';
+  $('#catRes').innerHTML = (r.warnings && r.warnings.length)
+    ? '<p class="warn">提醒：<br>' + r.warnings.map(esc).join('<br>') + '</p>' : '';
+}
+
+let DEFS = null;
+
+async function renderDefs(reload){
+  // reload !== false 时从服务端拉最新（进页面）；本地编辑后重绘传 false，避免把未保存的改动冲掉
+  if (reload !== false) {
+    const d = await api('/artifact-defs');
+    DEFS = {artifacts: d.artifacts || [], buckets: d.buckets || [], groups: d.groups || [],
+            pools: d.pools || ['clean','full']};
+  }
+  const grpKey = (a) => ({movie: 'other', adult: 'adult'})[a.group || 'movie'] || 'other';
+  const grpLabel = (k) => (DEFS.groups.find(x => x.key === k) || {}).label || k;
+  const bucketsOf = (a) => {
+    const g = DEFS.groups.find(x => x.key === grpKey(a));
+    return g ? g.buckets : DEFS.buckets;
+  };
+  const rows = DEFS.artifacts.map((a, i) => {
+    const ticked = (b) => a.buckets === 'all' || (Array.isArray(a.buckets) && a.buckets.indexOf(b) >= 0);
+    const buckets = bucketsOf(a);
+    const boxes = (a.type === 'agg')
+      ? '<span class="dim" style="font-size:12px;margin-right:6px">' + esc(grpLabel(grpKey(a))) + '</span>'
+        + buckets.map(b => '<label style="margin-right:8px;white-space:nowrap">'
+          + '<input type="checkbox" data-i="' + i + '" data-b="' + esc(b) + '" ' + (ticked(b) ? 'checked' : '') + '> '
+          + esc(b) + '</label>').join('')
+      : '<span class="dim" style="font-size:12px">直连列表没有分类层（分类只对聚合站产物生效）</span>';
+    return '<tr>'
+      + '<td><input data-i="' + i + '" data-f="name" value="' + esc(a.name || '') + '" style="width:100%;background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px"></td>'
+      + '<td><input data-i="' + i + '" data-f="file" value="' + esc(a.file || '') + '" style="width:100%;background:#0b0e12;color:#9fd0ff;border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px"></td>'
+      + '<td><select data-i="' + i + '" data-f="type" style="background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px">'
+      + '<option value="list" ' + ((a.type || 'list') === 'list' ? 'selected' : '') + '>直连列表</option>'
+      + '<option value="agg|movie" ' + (a.type === 'agg' && (a.group || 'movie') === 'movie' ? 'selected' : '') + '>聚合站·影视</option>'
+      + '<option value="agg|adult" ' + (a.type === 'agg' && a.group === 'adult' ? 'selected' : '') + '>聚合站·成人</option>'
+      + '</select></td>'
+      + '<td><select data-i="' + i + '" data-f="pool" style="background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px">'
+      + DEFS.pools.map(x => '<option ' + (a.pool === x ? 'selected' : '') + '>' + x + '</option>').join('') + '</select></td>'
+      + '<td><label><input type="checkbox" data-i="' + i + '" data-f="include_js" ' + (a.include_js ? 'checked' : '') + '> js</label>'
+      + '<label style="margin-left:8px"><input type="checkbox" data-i="' + i + '" data-f="lives" ' + (a.lives ? 'checked' : '') + '> 直播</label>'
+      + '<label style="margin-left:8px"><input type="checkbox" data-i="' + i + '" data-f="enabled" ' + (a.enabled !== false ? 'checked' : '') + '> 启用</label></td>'
+      + '<td style="min-width:250px">' + boxes + '</td>'
+      + '<td style="width:36px"><a href="#" onclick="delDef(' + i + ');return false" style="color:var(--bad)">删</a></td>'
+      + '</tr>';
+  }).join('');
+  $('#art').innerHTML = '<h3 style="font-size:14px;margin:0 0 8px">产物定义（想留几个留几个，分类自己勾）</h3>'
+    + '<table><tr><th style="width:110px">名称</th><th style="width:130px">文件名</th><th style="width:90px">类型</th><th style="width:80px">站点池</th>'
+    + '<th style="width:180px">包含</th><th>分类（来自「分类」tab）</th><th></th></tr>' + rows + '</table>'
+    + '<div class="row" style="margin-top:10px"><button onclick="addDef()">+ 再加一个产物</button>'
+    + '<button class="primary" onclick="saveDefs()">保存产物定义</button><span id="defMsg" class="dim"></span></div>'
+    + '<p class="dim" style="margin:8px 0 0">池：clean=三层全通（少而稳）/ full=全量（多而杂）；分类全勾=all。<br>'
+    + '分类勾选项直接读「分类」tab 的桶（改桶名/加删桶后这里自动跟着变）：聚合站产物按勾选分类真筛源，'
+    + '直连列表没有分类层。保存后重跑「07 生成」才出文件。</p>'
+    + '<div id="artFiles" style="margin-top:22px"></div>';
+  document.querySelectorAll('#art input, #art select').forEach(el => {
+    el.onchange = () => {
+      const i = +el.dataset.i, f = el.dataset.f, a = DEFS.artifacts[i];
+      if (el.type === 'checkbox' && el.dataset.b) {
+        const bl = bucketsOf(a);
+        const cur = a.buckets === 'all' ? bl.slice() : (a.buckets || []).slice();
+        const set = new Set(cur);
+        if (el.checked) set.add(el.dataset.b); else set.delete(el.dataset.b);
+        a.buckets = (set.size === bl.length) ? 'all' : [...set];
+      } else if (el.type === 'checkbox') {
+        a[f] = el.checked;
+      } else if (f === 'type') {
+        const v = el.value;
+        if (v === 'list') { a.type = 'list'; }
+        else { a.type = 'agg'; a.group = v.split('|')[1] || 'movie'; }
+        if (a.type === 'agg' && Array.isArray(a.buckets)) {
+          const bl = bucketsOf(a);
+          a.buckets = a.buckets.filter(x => bl.indexOf(x) >= 0);
+          if (!a.buckets.length) a.buckets = 'all';
+        }
+        renderDefs(false); return;
+      } else {
+        a[f] = el.value.trim();
+        if (f === 'name' && !a.id) a.id = el.value.trim();
+      }
+    };
+  });
+  await renderArtFiles();
+}
+
+function addDef(){
+  const n = DEFS.artifacts.length + 1;
+  DEFS.artifacts.push({id: 'art' + n, file: 'art' + n + '.json', name: '新产物' + n,
+    pool: 'clean', include_js: true, lives: true, buckets: 'all', enabled: true});
+  renderDefs(false);
+}
+function delDef(i){
+  if (DEFS.artifacts.length <= 1) return alert('至少留一个产物');
+  if (!confirm('删除产物「' + (DEFS.artifacts[i].name || '') + '」？保存并重跑生成后对应文件不再产出。')) return;
+  DEFS.artifacts.splice(i, 1); renderDefs(false);
+}
+async function saveDefs(){
+  const r = await fetch('/api/artifact-defs', {method: 'POST', headers: {'content-type': 'application/json'},
+    body: JSON.stringify({artifacts: DEFS.artifacts})}).then(x => x.json()).catch(e => ({detail: String(e)}));
+  if (r.detail) { $('#defMsg').innerHTML = '<span class="bad">保存失败：' + esc(r.detail) + '</span>'; return; }
+  $('#defMsg').innerHTML = '<span class="ok">已保存 ' + r.count + ' 个产物定义，重跑 07 生成后生效</span>';
+}
+
+async function renderArtFiles(){
+  const d = await api('/artifacts');
+  const sp = await api('/snapshots');
+  const HOST = $('#artFiles') || $('#art');
+  const rows = d.files.map(f => `<tr><td>${esc(f.file)}</td><td>${f.kind||''}</td><td>${f.count ?? '-'}</td>
+    <td>${(f.bytes/1024).toFixed(1)} KB</td><td class="dim">${f.mtime}</td>
+    <td>${f.file.endsWith('.json')?`<a href="#" onclick="preview('${esc(f.file)}');return false" style="color:var(--acc)">预览</a>`:''}</td></tr>`).join('');
+  const snaps = (sp.snapshots || []).map((x, i) => {
+    const cf = x.files['clean.json'] || {}, ff = x.files['full.json'] || {};
+    return `<tr><td><code>${esc(x.id)}</code></td><td class="dim">${esc(x.created||'')}</td>
+      <td>${cf.count ?? '-'} / ${ff.count ?? '-'}</td><td>${Object.keys(x.files||{}).length} 个文件</td>
+      <td>${i === 0 ? '<span class="ok">最新</span>' :
+        `<a href="#" onclick="restoreSnap('${esc(x.id)}');return false" style="color:var(--warn)">回滚到这版</a>`}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="dim">还没有快照（每次跑完 07 生成会自动存一份）</td></tr>';
+  HOST.innerHTML = `<table><tr><th>文件</th><th>类型</th><th>条数</th><th>大小</th><th>生成时间</th><th></th></tr>${rows}</table>
+    <h3 style="font-size:14px;margin:20px 0 8px">产物快照（可回滚）</h3>
+    <table><tr><th>快照</th><th>时间</th><th>clean/full</th><th>内容</th><th></th></tr>${snaps}</table>
+    <pre id="prev" style="margin-top:12px" class="dim">点上面的「预览」看前 20 项</pre>`;
+}
+
+async function restoreSnap(id){
+  if (!confirm('回滚到 ' + id + ' ？\n\n会先把当前版本另存为 pre-restore 快照，再覆盖 dist2。\n线上要生效还需再点一次发布。')) return;
+  const r = await fetch('/api/snapshots/' + encodeURIComponent(id) + '/restore', {method:'POST'})
+    .then(x => x.json()).catch(e => ({detail: String(e)}));
+  if (r.detail) return alert('回滚失败：' + r.detail);
+  alert('已还原 ' + r.restored.length + ' 个文件\n当前版本已另存为 ' + r.pre_restore + '\n' + r.note);
+  renderArt();
+}
+
+async function preview(f){
+  $('#prev').textContent = '读取中…';
+  const r = await fetch('/api/artifacts/' + encodeURIComponent(f) + '/preview?n=20')
+    .then(x => x.json()).catch(e => ({detail: String(e)}));
+  if (r.detail) { $('#prev').textContent = '预览失败：' + r.detail; return; }
+  const lines = r.items.map((x, i) =>
+    String(i + 1).padStart(2, ' ') + '. ' + (x.name ?? '') +
+    (x.total ? '   [' + x.total + ']' : '') + '\n    ' + (x.url ?? ''));
+  $('#prev').textContent = r.file + '   共 ' + r.total + ' 项，显示前 ' + r.shown + ' 项\n\n' + lines.join('\n');
+}
+
+async function renderHist(){
+  const d = await api('/runs');
+  if (!d.runs.length){ $('#hist').innerHTML = '<p class="dim">还没有运行记录</p>'; return; }
+  const rows = d.runs.map(r => `<tr><td><code>${r.run_id}</code></td>
+    <td class="${r.status==='ok'?'ok':r.status==='running'?'warn':'bad'}">${r.status||''}</td>
+    <td>${r.started||''}</td><td>${r.duration_ms?Math.round(r.duration_ms/1000)+' s':'-'}</td>
+    <td class="dim">${JSON.stringify(r.counters||{}).slice(0,90)}</td>
+    <td><a href="#" onclick="showLog('${r.run_id}');return false" style="color:var(--acc)">日志</a></td></tr>`).join('');
+  $('#hist').innerHTML = `<table><tr><th>run</th><th>状态</th><th>开始</th><th>耗时</th><th>计数</th><th></th></tr>${rows}</table><pre id="log" class="dim">选择一条看日志</pre>`;
+}
+async function showLog(id){
+  const d = await api('/runs/' + id);
+  const steps = (d.run.steps||[]).map(s=>s.step||s);
+  const last = steps[steps.length-1];
+  const L = await api(`/runs/${id}/log/${last}`);
+  $('#log').textContent = `--- ${last} ---\n` + (L.log || '(空)');
+}
+
+// ---------- 运行页 ----------
+function renderRun(){
+  $('#run').innerHTML = `
+    <div class="row">
+      <button class="primary" id="btnFull">一键全流程</button>
+      <button id="btnBuild">只生成（跳过测活）</button>
+      <label><input type="checkbox" id="chkDeploy"> 跑完发布到 Cloudflare</label>
+      <span id="runMsg" class="dim"></span>
+    </div>
+    <p class="dim">全流程 = 拉源 → 测活 → 去重 → 分类 → 三层验证 → 搜索测速 → 生成 → 部署。
+    本机实测 8–15 分钟；「只生成」跳过测活，2–4 分钟。</p>
+    <pre id="live" class="dim">尚未开始</pre>`;
+  $('#btnFull').onclick = () => start({deploy: $('#chkDeploy').checked});
+  $('#btnBuild').onclick = () => start({deploy: $('#chkDeploy').checked, skip_probe: true});
+}
+async function start(opt){
+  $('#runMsg').textContent = '提交中…';
+  const r = await fetch('/api/runs', {method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify(opt)}).then(x => x.json()).catch(e => ({error:String(e)}));
+  if (r.error || r.detail){ $('#runMsg').textContent = '失败：' + (r.error || r.detail); return; }
+  $('#runMsg').innerHTML = `已启动 <code>${r.run_id}</code>（pid ${r.pid}）`;
+  poll(r.run_id);
+}
+let POLL = null;
+async function poll(id){
+  if (POLL) clearInterval(POLL);
+  const tick = async () => {
+    const d = await api('/runs/' + id);
+    const st = d.run || {};
+    const steps = (st.steps || []).map(s => `${s.step||s} ${s.rc===null||s.rc===undefined?'…':s.rc===0?'✓':'rc='+s.rc}`).join('  ');
+    $('#live').textContent = `状态 ${st.status||'?'}\n${steps}`;
+    if (st.status && st.status !== 'running'){
+      clearInterval(POLL); POLL = null;
+      $('#runMsg').innerHTML = `完成：<b class="${st.status==='ok'?'ok':'bad'}">${st.status}</b> 用时 ${Math.round((st.duration_ms||0)/1000)}s`;
+    }
+  };
+  await tick(); POLL = setInterval(tick, 3000);
+}
+
+$('#hint').textContent = 'P0 · 只读仪表盘 + 一键运行';
+renderDash(); renderRun();
+</script>
+</body>
+</html>

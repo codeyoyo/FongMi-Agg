@@ -1,0 +1,10 @@
+# 运行态与日志（不入库）
+run/
+logs/
+data/
+# 备份与垃圾目录
+*.bak-*
+backup_main.py.*
+{app,static,bin,data,logs,run}/
+__pycache__/
+*.pyc
