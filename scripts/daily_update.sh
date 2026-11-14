@@ -81,6 +81,11 @@ echo "--- [7b] 生成 adult.json / other.json"
 python3 pipeline/judge.py >/dev/null 2>&1 && python3 builders/build_groups.py \
   || echo "  !! 分组生成失败，沿用上一版 adult/other"
 
+# 7ba) 国际组测活：iptv-org 的 us/jp/kr/sg 源属短时可用，实测一轮能掉一半，
+#      不每天重测就会在清单里堆死频道
+echo "--- [7ba] 国际组测活"
+python3 live/probe_intl.py 2>&1 | tail -3 || echo "  !! 国际组测活失败，沿用上一版"
+
 # 7bb) 播放实测：每源抽 4 部片走「详情 → 首集地址 → 校验 #EXTM3U」
 #      产出 play_probe.json，是 7c 优选的门槛依据；失败则沿用上一版
 echo "--- [7bb] 播放实测（优选依据）"
