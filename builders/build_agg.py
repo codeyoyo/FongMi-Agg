@@ -38,6 +38,13 @@ ADULT_BUCKETS = [
     ('动漫', ['动漫', '动画', '卡通']),
     ('伦理', ['伦理', '三级', '剧情', '短剧']),
 ]
+# 分类排除词：单字关键词会误伤——
+# 「电视剧」的 kws 含「剧」，会把「喜剧片/剧情片」一起收进来；
+# 「电影」的 kws 含「片」，会把「动漫电影」和动漫分类重复。
+BUCKET_XKWS = {
+    '电影': ['动漫'],
+    '电视剧': ['片', '动漫'],
+}
 GROUP_BUCKETS = {'other': BUCKETS, 'adult': ADULT_BUCKETS}
 GROUP_ORDER = {
     'other': ['电影', '电视剧', '综艺', '动漫', '纪录片', '其它'],
@@ -214,7 +221,8 @@ def main():
 
         order = GROUP_ORDER[grp]
         kws_map = dict(GROUP_BUCKETS[grp])
-        bl = [{'name': b, 'kws': kws_map.get(b, []), 'srcs': buckets[b]} for b in order if buckets.get(b)]
+        bl = [{'name': b, 'kws': kws_map.get(b, []), 'xkws': BUCKET_XKWS.get(b, []),
+               'srcs': buckets[b]} for b in order if buckets.get(b)]
         out[grp] = {'buckets': bl}
         print(f'{grp}: {len(srcs)} 源 → ' +
               ', '.join(f"{b['name']}{len(b['srcs'])}" for b in bl))

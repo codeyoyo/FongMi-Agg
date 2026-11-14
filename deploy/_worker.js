@@ -345,11 +345,23 @@ async function handleCategory(g, bucketName, pg) {
     if (!wantAll) {
       // 每个分类桶自带关键词（影视组和成人组各一套），不要共用同一张表
       const kws = (bucket && bucket.kws) || [];
-      const byType = kws.length
-        ? items.filter((it) => { const t = String(it.type_name || ''); return kws.some((k) => t.includes(k)); })
-        : items;
-      // 站内 tid 生效时结果本就该全是该类；过滤后为空说明它忽略了 t，退回原列表
-      final = src.tid && byType.length === 0 ? items : byType;
+      const xkws = (bucket && bucket.xkws) || [];
+      if (kws.length) {
+        const typed = items.filter((it) => String(it.type_name || '').trim());
+        if (typed.length === 0) {
+          // 这个站的列表接口不返回 type_name，没法判断，只能整批留下
+          final = items;
+        } else {
+          // 有 type_name 就严格过滤。绝不能「过滤为空 → 退回全量」：
+          // 各站 tid 语义并不一致（这站 1=电影，那站 1=电视剧），
+          // 退回全量会把整批国产剧塞进电影分类
+          final = items.filter((it) => {
+            const t = String(it.type_name || '');
+            if (xkws.some((k) => t.includes(k))) return false;   // 排除词优先
+            return kws.some((k) => t.includes(k));
+          });
+        }
+      }
     }
     STATS.push({ i: idx, n: items.length, hit: final.length, ms: Date.now() - t0, name: src.name, tid: src.tid || null, pc });
     return { idx, items: final, pagecount: pc };
