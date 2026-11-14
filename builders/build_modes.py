@@ -20,7 +20,7 @@ else:
     js_sites = [s for s in base_cfg['sites'] if s.get('ext')]
 extra = {k: v for k, v in base_cfg.items() if k != 'sites'}
 
-all_api = json.load(open(os.path.join(BASE, 'ok_api_final.json')))
+all_api = json.load(open(os.path.join(BASE, 'state', 'ok_api_final.json')))
 
 # 全量版也并入 clbug 池（已测活通过的）
 try:
@@ -41,13 +41,13 @@ try:
 except FileNotFoundError:
     pass
 # clean 池：sites_verified_pool.json = 旧池三层全通 + clbug 池三层全通，已去重
-_pool_file = os.path.join(BASE, 'sites_verified_pool.json')
+_pool_file = os.path.join(BASE, 'state', 'sites_verified_pool.json')
 if os.path.exists(_pool_file):
     clean_api = json.load(open(_pool_file))
     print(f'  clean 池: {len(clean_api)} 个（已验证三层全通，含 clbug 新站）')
 else:
-    clean_api = json.load(open(os.path.join(BASE, 'sites_clean.json')))
-    vr = {x['name']: x for x in json.load(open(os.path.join(BASE, 'verify_result.json')))}
+    clean_api = json.load(open(os.path.join(BASE, 'state', 'sites_clean.json')))
+    vr = {x['name']: x for x in json.load(open(os.path.join(BASE, 'state', 'verify_result.json')))}
     before = len(clean_api)
     clean_api = [x for x in clean_api
                  if all((vr.get(x['name']) or {}).get(k) for k in ('L1', 'L2', 'L3'))]
@@ -57,7 +57,7 @@ clean_apis = {str(x['api']) for x in clean_api}
 
 # 搜索实测结果：能搜到的按耗时排序，搜不到的关掉 searchable
 try:
-    _timing = {r['name']: r for r in json.load(open(os.path.join(BASE, 'search_timing.json')))}
+    _timing = {r['name']: r for r in json.load(open(os.path.join(BASE, 'state', 'search_timing.json')))}
 except FileNotFoundError:
     _timing = {}
 
@@ -102,7 +102,7 @@ def normalize_js(site):
 # 直播：聚合为单一分组，每频道挂多线路由 FongMi 自动 fallback
 # （不再是 10 个独立源让用户自己切换）
 try:
-    _lg = json.load(open(os.path.join(BASE, 'live_groups.json')))
+    _lg = json.load(open(os.path.join(BASE, 'state', 'live_groups.json')))
     LIVES = [{'name': '聚合直播', 'groups': _lg}]
     print('  直播: 聚合 %d 个分组 / %d 个频道（每频道多线路自动切换）'
           % (len(_lg), sum(len(g['channel']) for g in _lg)))

@@ -32,8 +32,8 @@ def probe(item):
 
 
 if __name__ == '__main__':
-    merged = json.load(open(os.path.join(BASE, 'live_merged.json')))
-    groups = json.load(open(os.path.join(BASE, 'live_groups.json')))
+    merged = json.load(open(os.path.join(BASE, 'state', 'live_merged.json')))
+    groups = json.load(open(os.path.join(BASE, 'state', 'live_groups.json')))
     hk_group = next((g for g in groups if g['name'] == '港澳台'), None)
     if not hk_group:
         print('没有港澳台分组，先跑 build_live_config.py')
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     want = dict(list(want.items())[:limit])
     print(f'待测 {len(want)} 个港澳台频道，每频道最多 {MAX_PROBE} 线', flush=True)
 
-    OUTP = os.path.join(BASE, 'hktw_tested.json')
+    OUTP = os.path.join(BASE, 'state', 'hktw_tested.json')
     out = {}
     if os.path.exists(OUTP):
         try:

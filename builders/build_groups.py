@@ -13,17 +13,17 @@ import json, os
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
 
-kinds = json.load(open(os.path.join(BASE, 'kinds2.json')))
+kinds = json.load(open(os.path.join(BASE, 'state', 'kinds2.json')))
 js_sites = [s for s in json.load(open(os.path.join(BASE, 'backup', 'fongmi-pre-mode.json')))['sites']
             if s.get('ext')]
 
 try:
-    _timing = {r['name']: r for r in json.load(open(os.path.join(BASE, 'search_timing.json')))}
+    _timing = {r['name']: r for r in json.load(open(os.path.join(BASE, 'state', 'search_timing.json')))}
 except FileNotFoundError:
     _timing = {}
 
 try:
-    _lg = json.load(open(os.path.join(BASE, 'live_groups.json')))
+    _lg = json.load(open(os.path.join(BASE, 'state', 'live_groups.json')))
     LIVES = [{'name': '聚合直播', 'groups': _lg}]
 except FileNotFoundError:
     LIVES = []

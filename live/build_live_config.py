@@ -249,7 +249,7 @@ def pick_channels(merged, tested):
 
     # 港澳台实测（probe_hktw.py）：有数据就只留能播的，全死的频道直接不展示
     hk_tested = {}
-    tp_hk = os.path.join(BASE, 'hktw_tested.json')
+    tp_hk = os.path.join(BASE, 'state', 'hktw_tested.json')
     if os.path.exists(tp_hk):
         try:
             hk_tested = json.load(open(tp_hk))
@@ -287,7 +287,7 @@ def pick_channels(merged, tested):
             groups['其他'].append(ch)
 
     # 国际：来自 intl_channels.json（iptv-org 的 sg/jp/kr 已实测通过的频道）
-    intl_p = os.path.join(BASE, 'intl_channels.json')
+    intl_p = os.path.join(BASE, 'config', 'intl_channels.json')
     if os.path.exists(intl_p):
         try:
             intl = json.load(open(intl_p))
@@ -350,16 +350,16 @@ def build_channel(display_name, routes, strict=False):
 
 
 if __name__ == '__main__':
-    merged = json.load(open(os.path.join(BASE, 'live_merged.json')))
+    merged = json.load(open(os.path.join(BASE, 'state', 'live_merged.json')))
     tested = {}
     # 1) 批量实测结果（最权威）
-    ta = os.path.join(BASE, 'live_route_test_all.json')
+    ta = os.path.join(BASE, 'state', 'live_route_test_all.json')
     if os.path.exists(ta):
         for k, v in json.load(open(ta)).items():
             tested[k] = {'name': '', 'routes': [g['url'] for g in (v.get('good') or [])]}
         print(f'  使用批量实测: {len(tested)} 个频道有可用线路')
     # 2) 早先的单频测试补充
-    tp = os.path.join(BASE, 'live_tested_core.json')
+    tp = os.path.join(BASE, 'state', 'live_tested_core.json')
     if os.path.exists(tp):
         for k, v in json.load(open(tp)).items():
             if k not in tested and v.get('routes'):
@@ -373,5 +373,5 @@ if __name__ == '__main__':
             print(f'  [{gname}] {c["name"]:18} {len(c["urls"])} 线路  首条来源标签={c["urls"][0].split("$")[-1]}')
 
     live_groups = [{'name': g, 'channel': chs} for g, chs in groups.items() if chs]
-    json.dump(live_groups, open(os.path.join(BASE, 'live_groups.json'), 'w'), ensure_ascii=False, indent=1)
+    json.dump(live_groups, open(os.path.join(BASE, 'state', 'live_groups.json'), 'w'), ensure_ascii=False, indent=1)
     print(f'\n写入 live_groups.json：{len(live_groups)} 个分组')

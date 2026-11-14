@@ -10,7 +10,7 @@ import json, os, sys, time, concurrent.futures as cf
 from test_live_routes import check
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PATH = os.path.join(BASE, 'intl_channels.json')
+PATH = os.path.join(BASE, 'config', 'intl_channels.json')
 WORKERS = 14
 MIN_KEEP = 10          # 存活少于这个数就认为是网络问题，不清空
 

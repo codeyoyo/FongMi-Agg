@@ -192,7 +192,7 @@ def classify(name):
 
 
 def main():
-    p = os.path.join(BASE, 'live_groups.json')
+    p = os.path.join(BASE, 'state', 'live_groups.json')
     groups = json.load(open(p))
     out = []
     prov_buckets = {}

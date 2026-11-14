@@ -79,7 +79,7 @@ def main():
             return str(u)
 
     pool, seen = [], set()
-    for x in json.load(open(os.path.join(BASE, 'ok_api_final.json'))):
+    for x in json.load(open(os.path.join(BASE, 'state', 'ok_api_final.json'))):
         k = h(x['api'])
         if k in seen:
             continue
@@ -102,7 +102,7 @@ def main():
         flag = 'ADULT' if r['_kind'] == 'adult' else 'clean'
         print(f"  {flag:<6} legit={r.get('_legit_hits')} n={len(r.get('_classes') or [])} "
               f"{str(r['name'])[:18]} {r.get('_cerr', '')}")
-    json.dump(rows, open(os.path.join(BASE, 'kinds2.json'), 'w'), ensure_ascii=False, indent=1)
+    json.dump(rows, open(os.path.join(BASE, 'state', 'kinds2.json'), 'w'), ensure_ascii=False, indent=1)
     print('→ kinds2.json')
 
 

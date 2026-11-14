@@ -37,8 +37,8 @@ from urllib.parse import urlparse
 def host(u):
     try: return (urlparse(u).hostname or '').lower()
     except Exception: return ''
-vr = {x['name']: x for x in json.load(open('verify_result.json'))}
-old = [x for x in json.load(open('sites_clean.json'))
+vr = {x['name']: x for x in json.load(open('state/verify_result.json'))}
+old = [x for x in json.load(open('state/sites_clean.json'))
        if all((vr.get(x['name']) or {}).get(k) for k in ('L1','L2','L3'))]
 new = [{'name': s['name'].strip(), 'type': s['type'], 'api': s['api'],
         '_total': s['total'], '_src': 'clbug'} for s in json.load(open('clbug_clean.json'))]
@@ -48,7 +48,7 @@ for s in old + new:
     h = host(s['api'])
     if h in seen: continue
     seen.add(h); pool.append(s)
-json.dump(pool, open('sites_verified_pool.json','w'), ensure_ascii=False, indent=1)
+json.dump(pool, open('state/sites_verified_pool.json','w'), ensure_ascii=False, indent=1)
 print(f'  合并池 {len(pool)} 个站，片库 ≈ {sum(int(s.get("_total") or 0) for s in pool)} 部')
 PY
 

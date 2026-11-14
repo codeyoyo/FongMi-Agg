@@ -14,7 +14,7 @@ DIST = os.path.join(BASE, 'dist2')
 HOST = 'https://fm.le138.de5.net'
 
 try:
-    LIVES = [{'name': '聚合直播', 'groups': json.load(open(os.path.join(BASE, 'live_groups.json')))}]
+    LIVES = [{'name': '聚合直播', 'groups': json.load(open(os.path.join(BASE, 'state', 'live_groups.json')))}]
 except FileNotFoundError:
     LIVES = []
 

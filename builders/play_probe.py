@@ -102,11 +102,11 @@ def probe_src(site):
 
 
 def main():
-    kinds = json.load(open(os.path.join(BASE, 'kinds2.json')))
+    kinds = json.load(open(os.path.join(BASE, 'state', 'kinds2.json')))
     with ThreadPoolExecutor(max_workers=6) as ex:
         rows = list(ex.map(probe_src, kinds))
     rows.sort(key=lambda r: (-r.get('rate', 0), -r.get('play_ok', 0)))
-    json.dump(rows, open(os.path.join(BASE, 'play_probe.json'), 'w'), ensure_ascii=False, indent=1)
+    json.dump(rows, open(os.path.join(BASE, 'state', 'play_probe.json'), 'w'), ensure_ascii=False, indent=1)
 
     ok = [r for r in rows if r.get('play_ok', 0) > 0]
     print(f'可播源 {len(ok)}/{len(rows)}')

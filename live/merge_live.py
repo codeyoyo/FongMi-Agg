@@ -79,7 +79,7 @@ if __name__ == '__main__':
         results = list(ex.map(get_one, srcs))
 
     # 统一入口 manual_sources.json 的直播源（load_manual.py 已解析成频道级）
-    mp = '/app/working/fongmi-agg/manual_live.json'
+    mp = '/app/working/fongmi-agg/state/manual_live.json'
     if os.path.exists(mp):
         manual = json.load(open(mp))
         results.append(('manual', [(x['name'], x['url'], x.get('grp', '')) for x in manual]))
@@ -115,4 +115,4 @@ if __name__ == '__main__':
         print(f'  {len(v):>3} 线路  {v[0]["name"][:30]}')
 
     json.dump({k: v for k, v in by_name.items()},
-              open('/app/working/fongmi-agg/live_merged.json', 'w'), ensure_ascii=False, indent=1)
+              open('/app/working/fongmi-agg/state/live_merged.json', 'w'), ensure_ascii=False, indent=1)

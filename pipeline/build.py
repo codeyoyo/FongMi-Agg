@@ -38,7 +38,7 @@ def clean(u):
 # ---------- 采集 ----------
 
 def load_sources():
-    p = os.path.join(BASE, 'sources.txt')
+    p = os.path.join(BASE, 'config', 'sources.txt')
     if not os.path.exists(p): return []
     out = []
     for line in open(p, encoding='utf-8'):

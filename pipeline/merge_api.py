@@ -4,7 +4,7 @@ import json, os, shutil
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
-api = json.load(open(os.path.join(BASE, 'ok_api_final.json')))
+api = json.load(open(os.path.join(BASE, 'state', 'ok_api_final.json')))
 base_cfg = json.load(open(os.path.join(DIST, 'fongmi.json')))
 
 js_sites = [s for s in base_cfg['sites'] if s.get('ext')]  # 96 个 js 源

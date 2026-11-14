@@ -26,7 +26,7 @@ def load_pool():
             return str(u)
 
     pool, seen = [], set()
-    for x in json.load(open(os.path.join(BASE, 'ok_api_final.json'))):
+    for x in json.load(open(os.path.join(BASE, 'state', 'ok_api_final.json'))):
         k = h(x['api'])
         if k in seen:
             continue
@@ -60,7 +60,7 @@ def main():
     for s in sorted(out, key=lambda x: -x.get('_total', 0)):
         if s['_kind'] != 'clean':
             print(f"  {s['_kind']:<12} rate={s.get('_rate')} {str(s['name'])[:16]}")
-    json.dump(out, open(os.path.join(BASE, 'kinds_all.json'), 'w'),
+    json.dump(out, open(os.path.join(BASE, 'state', 'kinds_all.json'), 'w'),
               ensure_ascii=False, indent=1)
     print('→ kinds_all.json')
 

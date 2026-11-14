@@ -63,7 +63,7 @@ def test_channel(item):
 
 
 if __name__ == '__main__':
-    merged = json.load(open('/app/working/fongmi-agg/live_merged.json'))
+    merged = json.load(open('/app/working/fongmi-agg/state/live_merged.json'))
     targets = sys.argv[1:] or ['cctv-1综合', 'cctv13新闻', '湖南卫视', '浙江卫视', '东方卫视', '江苏卫视']
     keys = []
     for t in targets:
@@ -84,4 +84,4 @@ if __name__ == '__main__':
         for r, ms, note in good[:5]:
             print(f'    {ms:>5}ms {note:<10} [{r["src"][:14]}] {r["url"][:66]}')
         print()
-    json.dump(out, open('/app/working/fongmi-agg/live_tested_core.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(out, open('/app/working/fongmi-agg/state/live_tested_core.json', 'w'), ensure_ascii=False, indent=1)

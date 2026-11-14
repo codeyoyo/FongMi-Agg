@@ -74,7 +74,7 @@ def main():
 
     total = sum(r.get('_total', 0) for r in ok)
     print(f'\n合计片库 ≈ {total:,} 部')
-    json.dump(ok, open('ok_api.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(ok, open('state/ok_api.json', 'w'), ensure_ascii=False, indent=1)
 
 
 if __name__ == '__main__':

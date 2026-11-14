@@ -102,7 +102,7 @@ def main():
         for r in dead[:10]:
             print(f"  {r['_total']:>8} 部  L1={r['L1']} L2={r['L2']}  {r['name'][:22]}  {r.get('err','')}")
 
-    json.dump(res, open('verify_result.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(res, open('state/verify_result.json', 'w'), ensure_ascii=False, indent=1)
     print(f"\n三层全通合计片库 ≈ {sum(r['_total'] for r in full):,} 部")
 
 

@@ -26,8 +26,8 @@ def probe_channel(item):
 
 
 if __name__ == '__main__':
-    merged = json.load(open(os.path.join(BASE, 'live_merged.json')))
-    groups = json.load(open(os.path.join(BASE, 'live_groups.json')))
+    merged = json.load(open(os.path.join(BASE, 'state', 'live_merged.json')))
+    groups = json.load(open(os.path.join(BASE, 'state', 'live_groups.json')))
 
     # 只测打包进配置的频道：用归一名反查 merged
     from build_live_config import canon
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         want = {k: v for k, v in want.items() if k in core}
 
     # 断点续测
-    OUTP = os.path.join(BASE, 'live_route_test_all.json')
+    OUTP = os.path.join(BASE, 'state', 'live_route_test_all.json')
     out = {}
     if os.path.exists(OUTP):
         try:
@@ -67,10 +67,10 @@ if __name__ == '__main__':
         if done % 5 == 0 or done == len(todo):
             alive = sum(1 for x in out.values() if x['good'])
             print(f'  {done}/{len(todo)}  累计可用 {alive} 个  {time.time()-t0:.0f}s', flush=True)
-            json.dump(out, open(os.path.join(BASE, 'live_route_test_all.json'), 'w'),
+            json.dump(out, open(os.path.join(BASE, 'state', 'live_route_test_all.json'), 'w'),
                       ensure_ascii=False, indent=1)
 
-    json.dump(out, open(os.path.join(BASE, 'live_route_test_all.json'), 'w'), ensure_ascii=False, indent=1)
+    json.dump(out, open(os.path.join(BASE, 'state', 'live_route_test_all.json'), 'w'), ensure_ascii=False, indent=1)
     dead = [k for k, v in out.items() if not v['good']]
     print(f'\n本轮完成 {len(todo)}，累计 {len(out)} 频道，可用 {len(out)-len(dead)}，全死 {len(dead)}，耗时 {time.time()-t0:.0f}s')
     if dead:

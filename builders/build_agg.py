@@ -164,14 +164,14 @@ def bucket_of(name, table=None):
 
 def main():
     load_cache()
-    kinds = json.load(open(os.path.join(BASE, 'kinds2.json')))
+    kinds = json.load(open(os.path.join(BASE, 'state', 'kinds2.json')))
     with ThreadPoolExecutor(max_workers=8) as ex:
         rows = list(ex.map(fetch_classes, kinds))
 
     # 播放实测结果（play_probe.py）：只把"详情能出 + 播放地址真的是 m3u8"的源收进池子
     quality = {}
     try:
-        for r in json.load(open(os.path.join(BASE, 'play_probe.json'))):
+        for r in json.load(open(os.path.join(BASE, 'state', 'play_probe.json'))):
             quality[r['name']] = {'play': int(r.get('play_ok') or 0),
                                   'n': int(r.get('n') or 0),
                                   'rate': float(r.get('rate') or 0)}

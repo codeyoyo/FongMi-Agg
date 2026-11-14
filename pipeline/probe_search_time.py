@@ -42,7 +42,7 @@ def probe(site):
 
 
 if __name__ == '__main__':
-    sites = json.load(open('/app/working/fongmi-agg/sites_verified_pool.json'))
+    sites = json.load(open('/app/working/fongmi-agg/state/sites_verified_pool.json'))
     with cf.ThreadPoolExecutor(12) as ex:
         res = list(ex.map(probe, sites))
 
@@ -56,4 +56,4 @@ if __name__ == '__main__':
     print('\n搜不到:')
     for r in bad:
         print(f"  {r['ms']:>5}ms  {r['name'][:22]}  {r['err'] or 'empty'}")
-    json.dump(res, open('/app/working/fongmi-agg/search_timing.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(res, open('/app/working/fongmi-agg/state/search_timing.json', 'w'), ensure_ascii=False, indent=1)

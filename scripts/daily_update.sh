@@ -26,7 +26,7 @@ import json
 d=json.load(open('/tmp/zy.json'))
 s=[x for x in (d.get('sites') or d) if x.get('type') in (0,1) and str(x.get('api','')).startswith('http')]
 try:
-    m=json.load(open('manual_vod_sites.json'))
+    m=json.load(open('state/manual_vod_sites.json'))
 except Exception:
     m=[]
 have={x['api'].rstrip('/') for x in s}
@@ -45,7 +45,7 @@ echo "--- [3/8] 去重"
 python3 - <<'PY'
 import json, urllib.parse
 from collections import defaultdict
-ok = json.load(open('ok_api.json'))
+ok = json.load(open('state/ok_api.json'))
 byhost = defaultdict(list)
 for s in ok:
     byhost[urllib.parse.urlparse(s['api']).netloc.lower()].append(s)
@@ -64,17 +64,17 @@ for x in best:
     if t:
         seen.add(t)
     uniq.append(x)
-json.dump(uniq, open('ok_api_final.json', 'w'), ensure_ascii=False, indent=1)
+json.dump(uniq, open('state/ok_api_final.json', 'w'), ensure_ascii=False, indent=1)
 print(f'  独立源 {len(uniq)} 个，合计 {sum(x.get("_total",0) for x in uniq):,} 部')
 PY
 
 # 4) 分类（正经 / 成人）
 echo "--- [4/8] 内容分类"
-python3 pipeline/classify_sites.py ok_api_final.json
+python3 pipeline/classify_sites.py state/ok_api_final.json
 
 # 5) 三层深度验证（clean 版据此收紧）
 echo "--- [5/8] 三层验证（分类/列表/详情）"
-python3 pipeline/verify_clean.py sites_clean.json
+python3 pipeline/verify_clean.py state/sites_clean.json
 
 # 6) 搜索能力测速（决定站点排序与 searchable）
 echo "--- [6/8] 搜索测速"

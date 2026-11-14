@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 from load_manual import fetch, parse_config  # noqa: E402
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MANUAL = os.path.join(BASE, 'manual_sources.json')
+MANUAL = os.path.join(BASE, 'config', 'manual_sources.json')
 OWN = 'https://fm.le138.de5.net/clean.json'
 
 

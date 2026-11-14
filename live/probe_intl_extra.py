@@ -14,7 +14,7 @@ WANT = {'my', 'sg', 'jp', 'th', 'ph', 'id', 'vn', 'in', 'gb', 'au', 'ca'}
 
 
 def main():
-    p = os.path.join(BASE, 'manual_live.json')
+    p = os.path.join(BASE, 'state', 'manual_live.json')
     if not os.path.exists(p):
         print('manual_live.json 不存在，跳过')
         return

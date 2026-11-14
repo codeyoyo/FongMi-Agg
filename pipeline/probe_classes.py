@@ -41,7 +41,7 @@ def get_classes(site):
 
 
 def main():
-    pool = json.load(open(os.path.join(BASE, 'ok_api_final.json')))
+    pool = json.load(open(os.path.join(BASE, 'state', 'ok_api_final.json')))
     try:
         extra = [{'name': s['name'].strip(), 'type': s['type'], 'api': s['api'],
                   '_total': s.get('total', 0)} for s in json.load(open(os.path.join(BASE, 'clbug_clean.json')))]
@@ -52,7 +52,7 @@ def main():
 
     with ThreadPoolExecutor(max_workers=8) as ex:
         out = list(ex.map(get_classes, pool))
-    json.dump(out, open(os.path.join(BASE, 'classes_all.json'), 'w'),
+    json.dump(out, open(os.path.join(BASE, 'state', 'classes_all.json'), 'w'),
               ensure_ascii=False, indent=1)
     ok = [x for x in out if x.get('_classes')]
     print(f'{len(ok)}/{len(out)} 拿到分类名')

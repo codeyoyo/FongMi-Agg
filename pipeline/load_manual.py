@@ -11,7 +11,7 @@ import json, os, re, sys, time
 import urllib.request, urllib.error, urllib.parse
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MANUAL = os.path.join(BASE, 'manual_sources.json')
+MANUAL = os.path.join(BASE, 'config', 'manual_sources.json')
 UA = 'Mozilla/5.0 (Linux; Android 12) okhttp/3.15.0'
 TIMEOUT = 25
 
@@ -300,12 +300,12 @@ def main():
             continue
         seen.add(k); uj.append(s)
 
-    json.dump(uq, open(os.path.join(BASE, 'manual_vod_sites.json'), 'w'),
+    json.dump(uq, open(os.path.join(BASE, 'state', 'manual_vod_sites.json'), 'w'),
               ensure_ascii=False, indent=1)
-    json.dump(uj, open(os.path.join(BASE, 'manual_js_sites.json'), 'w'),
+    json.dump(uj, open(os.path.join(BASE, 'state', 'manual_js_sites.json'), 'w'),
               ensure_ascii=False, indent=1)
-    if live_items or not os.path.exists(os.path.join(BASE, 'manual_live.json')):
-        json.dump(ul, open(os.path.join(BASE, 'manual_live.json'), 'w'),
+    if live_items or not os.path.exists(os.path.join(BASE, 'state', 'manual_live.json')):
+        json.dump(ul, open(os.path.join(BASE, 'state', 'manual_live.json'), 'w'),
                   ensure_ascii=False, indent=1)
     print(f"\n去重后：采集 {len(uq)} 个，js {len(uj)} 个，直播 {len(ul)} 条线路")
     if errs:

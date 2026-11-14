@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 echo "=== 实测数据状态"
 python3 - <<'PY'
 import json, os
-p = 'live_route_test_all.json'
+p = 'state/live_route_test_all.json'
 if not os.path.exists(p):
     print('  尚未生成'); raise SystemExit(1)
 d = json.load(open(p))

@@ -68,7 +68,7 @@ def main():
     clean.sort(key=lambda x: -x.get('_total', 0))
     for s in clean[:15]:
         print(f"  {s.get('_total', 0):>8} 部  rate={s['_rate']}  {str(s['name'])[:20]}")
-    json.dump(clean, open('sites_clean.json', 'w'), ensure_ascii=False, indent=1)
+    json.dump(clean, open('state/sites_clean.json', 'w'), ensure_ascii=False, indent=1)
     print(f'\n合计正经片库 ≈ {sum(s.get("_total",0) for s in clean):,} 部')
 
 

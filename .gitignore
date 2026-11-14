@@ -1,7 +1,29 @@
+# 凭据（绝不提交）
+.gh_token
+.cf_account
+.wrangler/
+
+# 构建中间产物：全部可由脚本重建，丢了不影响
+state/
+debug/
+backup/
+
+# 发布产物
+dist/
+dist2/
+
+# 日志
+logs/*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# 预研临时（旧位置残留防护，实际已在 state/）
 manual_live.json
 manual_vod_sites.json
 manual_js_sites.json
-drpy/out*/
-logs/*.log
-.gh_token
-.cf_account
+drpy/
+
+# 运行期缓存
+jscache/

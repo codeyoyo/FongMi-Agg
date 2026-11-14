@@ -4,7 +4,7 @@
 
 ## 统一入口：`manual_sources.json`
 
-**加源只改这一个文件**，不用碰脚本。三类各走各的流水线：
+**加源只改这一个文件**（`config/manual_sources.json`），不用碰脚本。三类各走各的流水线：
 
 | 键 | 内容 | 流水线 |
 |---|---|---|
@@ -32,8 +32,13 @@ python3 builders/build_multi.py     # 探测可用配置 → dist2/multi.json
 
 ## 目录结构
 
+**根目录只放 `README.md` / `AGENTS.md` / `.gitignore` / `.gh_token`**，其余一律归位（详见 `AGENTS.md`）。
+
 ```
 .
+├── config/       人工维护的输入（manual_sources.json / intl_channels.json / sources.txt）
+├── state/        构建中间产物：测活结果、分类结果、直播池、分组输出（可重建，不进 git）
+├── debug/        一次性排障残留（不进 git）
 ├── scripts/      入口脚本（所有能直接跑的东西都在这）
 ├── pipeline/     采集链路：拉源 → 测活 → 去重 → 分类 → 三层验证
 ├── builders/     生成器：订阅文件、两组配置、聚合站点
@@ -47,6 +52,14 @@ python3 builders/build_multi.py     # 探测可用配置 → dist2/multi.json
 ├── backup/       历史配置备份
 └── logs/         每日运行日志，保留 14 天
 ```
+
+| 归位规则 | 判断依据 |
+|---|---|
+| `config/` | 人会更新的清单 —— `manual_sources.json`、`intl_channels.json`、`sources.txt` |
+| `state/` | 脚本写、丢了能重跑的 —— `live_groups.json`、`live_merged.json`、`ok_api*.json`、`sites_*.json`、`kinds*.json`、`play_probe.json` 等 |
+| `debug/` | 排障时的一次性输出 |
+
+**不要往根目录新增数据文件。**
 
 | 目录 | 文件 | 作用 |
 |---|---|---|
@@ -83,7 +96,8 @@ python3 builders/build_multi.py     # 探测可用配置 → dist2/multi.json
 | | `publish.py` | Direct Upload 发布 |
 | | `test_worker.mjs` | 本地校验 Worker 路由 |
 
-> 所有脚本都以**仓库根**为工作目录（`scripts/*.sh` 内部先 `cd` 到仓库根；`*.py` 用 `BASE = 仓库根` 定位数据文件），因此数据文件始终读写仓库根，可任意在根目录执行。
+> 所有脚本都以**仓库根**为工作目录（`scripts/*.sh` 内部先 `cd` 到仓库根；`*.py` 用 `BASE = 仓库根` 定位）。
+> 数据文件一律走 `<BASE>/state/` 与 `<BASE>/config/` 两个子目录，**不再直接落根目录**，所以在根目录执行任意脚本都安全。
 
 ## 链接
 
@@ -140,8 +154,8 @@ bash scripts/daily_update.sh
 bash scripts/daily_update.sh --no-deploy
 
 # 单步
-python3 pipeline/probe_api.py <站点列表.json>       # 测活 → ok_api.json
-python3 pipeline/classify_sites.py ok_api_final.json # 分类 → sites_clean.json
+python3 pipeline/probe_api.py <站点列表.json>       # 测活 → state/ok_api.json
+python3 pipeline/classify_sites.py state/ok_api_final.json  # 分类 → state/sites_clean.json
 python3 builders/build_agg.py                        # 探测各源分类约定 → dist2/agg_srcs.json
 python3 builders/build_two.py                        # 生成 → dist2/two.json（两条站点）
 python3 builders/build_modes.py                      # 生成 → dist2/clean.json + full.json
