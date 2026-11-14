@@ -286,8 +286,14 @@ def pick_channels(merged, tested):
             nm = x['name']
             by_name.setdefault(nm, []).append(x)
         # 新闻/国际台优先，其余按国别
-        PRIORITY = ('CNA', 'Arirang', 'NHK', 'KBS', 'MBC', 'SBS', 'Weathernews', 'Channel 5',
-                    'Channel 8', 'Channel U')
+        # 新闻台优先，其次影视/体育/纪录/儿童
+        PRIORITY = ('CNN', 'BBC Earth', 'Bloomberg', 'CNA', 'Al Jazeera', 'Arirang',
+                    'NHK', 'KBS', 'MBC', 'SBS', 'Weathernews',
+                    'Channel 5', 'Channel 8', 'Channel U',
+                    'ESPN', 'NBA TV',
+                    'Discovery', 'National Geographic', 'Animal Planet', 'History',
+                    'Cinemax', 'Starz', 'Showtime', 'Paramount', 'TNT', 'Bravo',
+                    'Disney', 'PBS Kids', 'Food Network', 'MTV', 'VH1')
         def intl_rank(nm):
             for i, w in enumerate(PRIORITY):
                 if w.lower() in nm.lower():

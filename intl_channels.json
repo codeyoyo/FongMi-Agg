@@ -5,66 +5,6 @@
   "cc": "sg"
  },
  {
-  "name": "Channel 5",
-  "url": "https://cdn.qd.je/163189/ch5",
-  "cc": "sg"
- },
- {
-  "name": "Channel 8",
-  "url": "https://cdn.qd.je/163189/ch8",
-  "cc": "sg"
- },
- {
-  "name": "Channel U",
-  "url": "https://cdn.qd.je/163189/chu",
-  "cc": "sg"
- },
- {
-  "name": "CNA",
-  "url": "https://d2e1asnsl7br7b.cloudfront.net/7782e205e72f43aeb4a48ec97f66ebbe/index.m3u8",
-  "cc": "sg"
- },
- {
-  "name": "CNA Originals",
-  "url": "https://amg01082-cna-amg01082c1-rlaxx-us-11304.playouts.now.amagi.tv/playlist.m3u8",
-  "cc": "sg"
- },
- {
-  "name": "CGNTV Japan",
-  "url": "https://d2p4mrcwl6ly4.cloudfront.net/out/v1/8d50f69fdbbf411a8d302743e4263716/CGNWebLiveJP.m3u8",
-  "cc": "jp"
- },
- {
-  "name": "GSTV",
-  "url": "https://japaneast.av.mk.io/mediakindcdn-mediakind/ca01a143-f823-4432-b670-c22ff9643ce4/index.qfm/manifest(format=m3u8-cmaf)",
-  "cc": "jp"
- },
- {
-  "name": "QVC",
-  "url": "https://d1flvb4iqlercm.cloudfront.net/live/live_1080p_2nd.m3u8",
-  "cc": "jp"
- },
- {
-  "name": "Shop Channel",
-  "url": "https://stream3.shopch.jp/HLS/master.m3u8",
-  "cc": "jp"
- },
- {
-  "name": "TV-U Yamagata",
-  "url": "https://tv-stream-test.daydreamer-json.cc/stream/1668b5a43560598b385ccf33fd2d5f43/master.m3u8",
-  "cc": "jp"
- },
- {
-  "name": "Weathernews",
-  "url": "https://rch01e-alive-hls.akamaized.net/38fb45b25cdb05a1/out/v1/4e907bfabc684a1dae10df8431a84d21/index.m3u8",
-  "cc": "jp"
- },
- {
-  "name": "ABN",
-  "url": "https://vod2.abn.co.kr/IPHONE/abn.m3u8",
-  "cc": "kr"
- },
- {
   "name": "Arirang Radio",
   "url": "http://amdlive-ch01.ctnd.com.edgesuite.net/arirang_3ch/smil:arirang_3ch.smil/playlist.m3u8",
   "cc": "kr"
@@ -80,78 +20,8 @@
   "cc": "kr"
  },
  {
-  "name": "BTN TV",
-  "url": "https://btn.nowcdn.co.kr/btn/btnlive2m/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "CJ OnStyle",
-  "url": "https://live-ch1.cjonstyle.net/cjmalllive/stream2/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "CJ OnStyle+",
-  "url": "https://live-ch2.cjonstyle.net/cjosplus/live2/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "EBS 1TV",
-  "url": "https://ebsonair.ebs.co.kr/ebs1familypc/familypc1m/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "EBS 2TV",
-  "url": "https://ebsonair.ebs.co.kr/ebs2familypc/familypc1m/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "EBS English",
-  "url": "https://ebsonair.ebs.co.kr/plus3familypc/familypc1m/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "EBS Kids",
-  "url": "https://ebsonair.ebs.co.kr/ebsufamilypc/familypc1m/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "EBS Plus 1",
-  "url": "https://ebsonair.ebs.co.kr/plus1familypc/familypc1m/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "EBS Plus 2",
-  "url": "https://ebsonair.ebs.co.kr/plus2familypc/familypc1m/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "FGTV",
-  "url": "https://fgtvlive.fgtv.com/smil:fgtv.smil/playlist.m3u8",
-  "cc": "kr"
- },
- {
   "name": "GCN",
   "url": "http://liveko24-manminglobal3.ktcdn.co.kr/liveko24/gcnko_1300k.stream/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "Gongyoung Home Shopping",
-  "url": "https://etv.publichs.com/live5.stream/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "GS My Shop",
-  "url": "https://gstv-myshop.gsshop.com/myshop_hd/myshop_hd.stream/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "GS Shop",
-  "url": "https://gstv-gsshop.gsshop.com/gsshop_hd/gsshop_hd.stream/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "Gugak TV",
-  "url": "https://mgugaklive.nowcdn.co.kr/gugakvideo/gugakvideo.stream/playlist.m3u8",
   "cc": "kr"
  },
  {
@@ -160,18 +30,8 @@
   "cc": "kr"
  },
  {
-  "name": "HLAJ-DTV",
-  "url": "https://wowza.jejumbc.com/live/tv_jejumbc/playlist.m3u8",
-  "cc": "kr"
- },
- {
   "name": "HLAM-DTV",
   "url": "http://vod.mpmbc.co.kr:1935/live/encoder-tv/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "HLAN-DTV",
-  "url": "https://stream.chmbc.co.kr/TV/myStream/playlist.m3u8",
   "cc": "kr"
  },
  {
@@ -180,53 +40,8 @@
   "cc": "kr"
  },
  {
-  "name": "HLAT-DTV",
-  "url": "https://5c3639aa99149.streamlock.net/live_TV/tv/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "HLCG-DTV",
-  "url": "http://61.82.49.4:1935/live/_definst_/tv.stream/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "HLCQ-DTV",
-  "url": "https://ns1.tjmbc.co.kr/live/myStream.sdp/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "HLCT-DTV",
-  "url": "https://5ee1ec6f32118.streamlock.net/live/livetv/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "HLDH-DTV",
-  "url": "https://vod.ikbc.co.kr/KBCTV/tv/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "HLDP-DTV",
-  "url": "https://stream.ubc.co.kr/hls/ubctvstream/index.m3u8",
-  "cc": "kr"
- },
- {
   "name": "HLDQ-DTV",
   "url": "http://61.85.197.53:1935/jtv_live/myStream/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "HLDR-DTV",
-  "url": "http://1.222.207.80:1935/live/cjbtv/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "HLKJ-DTV",
-  "url": "http://123.140.197.22/stream/1/play.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "Hyundai Home Shopping + Shop",
-  "url": "https://dtvstreaming.hyundaihmall.com/newcjp3/_definst_/newcjpstream.smil/playlist.m3u8",
   "cc": "kr"
  },
  {
@@ -235,53 +50,13 @@
   "cc": "kr"
  },
  {
-  "name": "KTV",
-  "url": "https://hlive.ktv.go.kr/live/klive_h.stream/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "Lotte Home Shopping",
-  "url": "https://pchlslivesw.lotteimall.com/live/livestream/lotteimalllive_mp4.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "Lotte OneTV",
-  "url": "https://onetvhlslive.lotteimall.com/lotteonetvlive/lotteonetvlive.mp4.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "NBS",
-  "url": "https://media.joycorp.co.kr:4443/live/ngrp:live_all/playlist.m3u8",
-  "cc": "kr"
- },
- {
   "name": "NHTV",
   "url": "http://nonghyup.flive.skcdn.com/nonghyup/_definst_/nhlive/playlist.m3u8",
   "cc": "kr"
  },
  {
-  "name": "OUN",
-  "url": "https://live.knou.ac.kr/knou1/live1/playlist.m3u8",
-  "cc": "kr"
- },
- {
   "name": "RUTC TV",
   "url": "http://d26sxnc75smwvh.cloudfront.net/livehttporigin/rutclive_720p2.stream/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "Shinsegae TV Shopping",
-  "url": "https://liveout.catenoid.net/live-02-shinsegaetvshopping/shinsegaetvshopping_720p/playlist.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "Shopping NT",
-  "url": "https://live.shoppingntmall.com/live/10011.m3u8",
-  "cc": "kr"
- },
- {
-  "name": "TBS TV",
-  "url": "https://cdntv.tbs.seoul.kr/tbs/tbs_tv_web.smil/playlist.m3u8",
   "cc": "kr"
  },
  {
@@ -295,8 +70,118 @@
   "cc": "kr"
  },
  {
-  "name": "W Shopping",
-  "url": "https://liveout.catenoid.net/live-05-wshopping/wshopping_1500k/playlist.m3u8",
-  "cc": "kr"
+  "name": "Animal Planet",
+  "url": "http://23.237.104.106:8080/USA_ANIMAL_PLANET/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Bloomberg TV",
+  "url": "http://23.237.104.106:8080/USA_BLOOMBERG/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Bravo",
+  "url": "http://41.205.93.154/BRAVO/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Cinemax West",
+  "url": "http://23.237.104.106:8080/USA_CINEMAX_WEST/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Cinemax Classics",
+  "url": "http://23.237.104.106:8080/USA_5STARMAX/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Cinemax Hits",
+  "url": "http://23.237.104.106:8080/USA_MOREMAX/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Discovery Turbo",
+  "url": "http://41.205.93.154/ESPNNEWS/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Disney Channel",
+  "url": "http://4.30.180.36:8420/disneychannel/index.m3u8?token=test",
+  "cc": "us"
+ },
+ {
+  "name": "ESPN 2 HD",
+  "url": "http://85.237.89.160:9590/usa-s/ESPN-2-HD/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "ESPN HD",
+  "url": "http://85.237.89.160:9590/usa-s/ESPN-HD/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Food Network",
+  "url": "http://23.237.104.106:8080/USA_FOOD_NETWORK/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "History",
+  "url": "http://212.5.144.156:8080/history/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Investigation Discovery",
+  "url": "http://212.5.144.156:8080/id/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "MTV",
+  "url": "http://23.237.104.106:8080/USA_MTV/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "MTV Live",
+  "url": "http://23.237.104.106:8080/USA_MTV_LIVE/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "NBA TV",
+  "url": "http://23.237.104.106:8080/USA_NBA/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Paramount Network",
+  "url": "http://23.237.104.106:8080/USA_PARAMOUNT_NETWORK/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Showtime Family Zone",
+  "url": "http://23.237.104.106:8080/USA_SHOWTIME_FAMILY/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Starz West",
+  "url": "http://23.237.104.106:8080/USA_STARZ_WEST/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Starz Comedy",
+  "url": "http://23.237.104.106:8080/USA_STARZ_COMEDY/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "Starz Kids & Family",
+  "url": "http://23.237.104.106:8080/USA_STARZ_FAMILY/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "TNT",
+  "url": "http://212.5.144.156/tnt/index.m3u8",
+  "cc": "us"
+ },
+ {
+  "name": "VH1",
+  "url": "http://23.237.104.106:8080/USA_VH1/index.m3u8",
+  "cc": "us"
  }
 ]
