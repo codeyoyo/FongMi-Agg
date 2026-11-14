@@ -85,7 +85,7 @@ def main():
             continue
         seen.add(k)
         pool.append(x)
-    for s in json.load(open(os.path.join(BASE, 'clbug_clean.json'))):
+    for s in json.load(open(os.path.join(BASE, 'debug', 'clbug_clean.json'))):
         k = h(s['api'])
         if k in seen:
             continue

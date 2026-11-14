@@ -44,7 +44,7 @@ def main():
     pool = json.load(open(os.path.join(BASE, 'state', 'ok_api_final.json')))
     try:
         extra = [{'name': s['name'].strip(), 'type': s['type'], 'api': s['api'],
-                  '_total': s.get('total', 0)} for s in json.load(open(os.path.join(BASE, 'clbug_clean.json')))]
+                  '_total': s.get('total', 0)} for s in json.load(open(os.path.join(BASE, 'debug', 'clbug_clean.json')))]
         seen = {str(x['api']) for x in pool}
         pool += [x for x in extra if str(x['api']) not in seen]
     except FileNotFoundError:

@@ -30,7 +30,7 @@ try:
         except Exception: return str(u)
     _seen = {_h(x['api']) for x in all_api}
     _add = 0
-    for _s in json.load(open(os.path.join(BASE, 'clbug_clean.json'))):
+    for _s in json.load(open(os.path.join(BASE, 'debug', 'clbug_clean.json'))):
         if _h(_s['api']) in _seen:
             continue
         _seen.add(_h(_s['api']))
