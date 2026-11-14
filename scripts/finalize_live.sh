@@ -19,6 +19,10 @@ PY
 echo "=== 重建直播分组（只留实测通过线路）"
 python3 live/build_live_config.py
 
+# 「其他」组里有几百个地市/区县台，平铺成一行找不到，按省份细分
+echo "=== 细分地方台（按省份分组）"
+python3 live/split_other.py 2>&1 | head -30
+
 echo "=== 生成配置"
 python3 builders/build_modes.py
 
