@@ -111,10 +111,13 @@ except FileNotFoundError:
               'https://cdn.jsdelivr.net/gh/Guovin/iptv-api@gd/output/result.m3u'}]
 
 
-def build(pool, fname, label):
+def build(pool, fname, label, include_js=True, lives=True, buckets='all'):
     pool = sorted(pool, key=search_rank)
-    sites = [to_site(x) for x in pool] + [normalize_js(x) for x in js_sites]
-    cfg = {'sites': sites, 'lives': LIVES}
+    js = [normalize_js(x) for x in js_sites] if include_js else []
+    sites = [to_site(x) for x in pool] + js
+    cfg = {'sites': sites, 'lives': LIVES if lives else []}
+    if buckets != 'all':
+        cfg['categories'] = list(buckets)
     cfg.update(extra)
 
     # 去重（同名/同 api）
@@ -134,14 +137,46 @@ def build(pool, fname, label):
           f'  片库 ≈ {total:,}  文件 {os.path.getsize(p)} B')
 
 
-build(clean_api, 'clean.json', '干净版')
-build(all_api, 'full.json', '全量版')
+# ---------- 产物定义（可自定义） ----------
+DEFAULT_ARTS = [
+    {'id': 'clean', 'file': 'clean.json', 'name': '干净版', 'pool': 'clean',
+     'include_js': True, 'lives': True, 'buckets': 'all', 'enabled': True},
+    {'id': 'full', 'file': 'full.json', 'name': '全量版', 'pool': 'full',
+     'include_js': True, 'lives': True, 'buckets': 'all', 'enabled': True},
+    {'id': 'basic', 'file': 'basic.json', 'name': '极简版', 'pool': 'clean',
+     'include_js': False, 'lives': True, 'buckets': 'all', 'enabled': True},
+]
+ART_FILE = os.environ.get('FONGMI_ARTIFACTS') or os.path.join(BASE, 'config', 'artifacts.json')
 
-# basic：只有采集站，不含 js 源 —— 排查搜索慢/结果少用
-_saved = globals()['js_sites']
-globals()['js_sites'] = []
-build(clean_api, 'basic.json', '极简版')
-globals()['js_sites'] = _saved
+
+def load_artifacts():
+    if not os.path.exists(ART_FILE):
+        print('  产物：用内置三件套（无 config/artifacts.json）')
+        return DEFAULT_ARTS
+    try:
+        cfg = json.load(open(ART_FILE, encoding='utf-8'))
+        arts = [a for a in (cfg.get('artifacts') or []) if a.get('enabled', True)]
+        if not arts:
+            raise ValueError('artifacts 为空')
+        print(f'  产物：使用 {os.path.relpath(ART_FILE, BASE)}（{len(arts)} 个）')
+        return arts
+    except Exception as e:
+        print(f'  !! artifacts.json 读取失败，用内置三件套：{e}')
+        return DEFAULT_ARTS
+
+
+POOLS = {'clean': lambda: clean_api, 'full': lambda: all_api}
+
+for _a in load_artifacts():
+    _fname = _a.get('file') or (_a['id'] + '.json')
+    _pool = POOLS.get(_a.get('pool', 'clean'))
+    if not _pool:
+        print(f"  !! 产物 {_a.get('id')} 的 pool={_a.get('pool')} 不认识，跳过")
+        continue
+    build(_pool(), _fname, _a.get('name') or _a['id'],
+          include_js=bool(_a.get('include_js', True)),
+          lives=bool(_a.get('lives', True)),
+          buckets=_a.get('buckets', 'all'))
 
 # 旧文件清掉，避免混淆
 for old in ('fongmi-full.json',):

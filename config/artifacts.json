@@ -1,0 +1,38 @@
+{
+ "note": "产物定义：GUI「产物」页可勾选每个产物包含哪些分类；改完需重跑 07 生成才生效。buckets 填 all 表示不限制。pool 可选 clean（三层全通池）/ full（全量池）。",
+ "artifacts": [
+  {
+   "id": "clean",
+   "file": "clean.json",
+   "name": "干净版",
+   "desc": "家里电视用：只含测活全通的正经影视站",
+   "pool": "clean",
+   "include_js": true,
+   "lives": true,
+   "buckets": "all",
+   "enabled": true
+  },
+  {
+   "id": "full",
+   "file": "full.json",
+   "name": "全量版",
+   "desc": "自己用：全量池，站最多",
+   "pool": "full",
+   "include_js": true,
+   "lives": true,
+   "buckets": "all",
+   "enabled": true
+  },
+  {
+   "id": "basic",
+   "file": "basic.json",
+   "name": "极简版",
+   "desc": "只有采集站，不含 js 源，排查搜索慢用",
+   "pool": "clean",
+   "include_js": false,
+   "lives": true,
+   "buckets": "all",
+   "enabled": true
+  }
+ ]
+}
