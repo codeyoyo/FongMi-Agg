@@ -1,8 +1,8 @@
 #!/bin/bash
 # daily_update.sh —— 每日全流程：拉源 → 测活 → 分类 → 生成 → 部署
 #
-#   sh scripts/daily_update.sh            # 跑完整流程
-#   sh scripts/daily_update.sh --no-deploy # 只生成不部署（本地检查）
+#   bash scripts/daily_update.sh            # 跑完整流程（必须 bash：用了 exec > >(tee) 进程替换）
+#   bash scripts/daily_update.sh --no-deploy # 只生成不部署（本地检查）
 #
 # 依赖：python3、node（可选，用于本地校验 Worker）
 # 部署需要：CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
