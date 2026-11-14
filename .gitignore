@@ -3,3 +3,5 @@ manual_vod_sites.json
 manual_js_sites.json
 drpy/out*/
 logs/*.log
+.gh_token
+.cf_account
