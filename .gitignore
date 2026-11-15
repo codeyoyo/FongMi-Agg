@@ -27,3 +27,7 @@ drpy/
 
 # 运行期缓存
 jscache/
+
+# 工具/管理台运行态
+.mimosa/
+config/*.bak
