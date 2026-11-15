@@ -10,10 +10,13 @@
 标准分类桶把各源五花八门的 tid 对齐，App 里只看到 6 个分类，
 每个分类背后是 N 个源合并。
 """
-import json, os, re, time, urllib.request
+import json, os, re, sys, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 DIST = os.path.join(BASE, 'dist2')
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 
@@ -77,8 +80,8 @@ def dump_categories():
             'buckets': [{'name': b, 'kws': kws_map.get(b, []), 'xkws': xk.get(b, [])}
                         for b in GROUP_ORDER[g]],
         }
-    with open(CATEGORIES_FILE, 'w', encoding='utf-8') as fh:
-        json.dump(out, fh, ensure_ascii=False, indent=1)
+    Path(CATEGORIES_FILE).write_text(
+        json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
     return CATEGORIES_FILE
 
 
@@ -128,7 +131,7 @@ MAX_SRC_PER_BUCKET = 18   # Cloudflare 每请求 subrequest 上限 50，留足�
 def _get(url):
     try:
         req = urllib.request.Request(url, headers=UA)
-        with urllib.request.urlopen(req, timeout=12) as r:
+        with safe_http.open_request(req, timeout=12) as r:
             return r.read(300000).decode('utf-8', 'ignore')
     except Exception:
         return None
@@ -166,7 +169,7 @@ def load_cache():
 
 def save_cache():
     try:
-        json.dump(_cache, open(CACHE_FILE, 'w'), ensure_ascii=False)
+        Path(CACHE_FILE).write_text(json.dumps(_cache, ensure_ascii=False), encoding='utf-8')
     except Exception:
         pass
 
@@ -307,7 +310,8 @@ def main():
     n_adult = len({s['api'] for b in out.get('adult', {}).get('buckets', []) for s in b['srcs']})
     if n_other < 5 or n_adult < 3:
         raise SystemExit(f'!! 源数异常（other={n_other} adult={n_adult}），保留上一版 agg_srcs.json')
-    json.dump(out, open(os.path.join(DIST, 'agg_srcs.json'), 'w'), ensure_ascii=False)
+    Path(os.path.join(DIST, 'agg_srcs.json')).write_text(
+        json.dumps(out, ensure_ascii=False), encoding='utf-8')
     print('→ dist2/agg_srcs.json', os.path.getsize(os.path.join(DIST, 'agg_srcs.json')), 'B')
 
 

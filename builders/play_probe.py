@@ -16,21 +16,24 @@
 """
 import json, os, re, subprocess, sys, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 UA = 'Mozilla/5.0 (Linux; Android 12)'
 SAMPLES = 4
 
 
 def http_json(url, timeout=15):
     req = urllib.request.Request(url, headers={'User-Agent': UA})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with safe_http.open_request(req, timeout=timeout) as r:
         return json.loads(r.read().decode('utf-8', 'ignore'))
 
 
 def fetch_text(url, timeout=12):
     req = urllib.request.Request(url, headers={'User-Agent': UA})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with safe_http.open_request(req, timeout=timeout) as r:
         return r.read(4096).decode('utf-8', 'ignore')
 
 
@@ -45,7 +48,7 @@ def probe_src(site):
 
     try:
         q = 'ac=videolist&pg=1' + ('&at=xml' if typ == 0 else '')
-        body = urllib.request.urlopen(
+        body = safe_http.open_request(
             urllib.request.Request(join(api, q), headers={'User-Agent': UA}),
             timeout=15).read().decode('utf-8', 'ignore')
     except Exception as e:
@@ -70,7 +73,7 @@ def probe_src(site):
         out['n'] += 1
         try:
             q = f'ac=detail&ids={vid}' + ('&at=xml' if typ == 0 else '')
-            raw = urllib.request.urlopen(
+            raw = safe_http.open_request(
                 urllib.request.Request(join(api, q), headers={'User-Agent': UA}),
                 timeout=15).read().decode('utf-8', 'ignore')
             if typ == 0 or raw.lstrip().startswith('<'):
@@ -106,7 +109,8 @@ def main():
     with ThreadPoolExecutor(max_workers=6) as ex:
         rows = list(ex.map(probe_src, kinds))
     rows.sort(key=lambda r: (-r.get('rate', 0), -r.get('play_ok', 0)))
-    json.dump(rows, open(os.path.join(BASE, 'state', 'play_probe.json'), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'play_probe.json')).write_text(
+        json.dumps(rows, ensure_ascii=False, indent=1), encoding='utf-8')
 
     ok = [r for r in rows if r.get('play_ok', 0) > 0]
     print(f'可播源 {len(ok)}/{len(rows)}')

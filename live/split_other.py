@@ -5,6 +5,7 @@
 FongMi 的分组是平的，不能嵌套，所以用「地方·江苏」这种前缀做二级分类。
 """
 import json, os, re
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -243,7 +244,7 @@ def main():
     if misc.get('其他'):
         out.append({'name': '其他', 'channel': misc['其他']})
 
-    json.dump(out, open(p, 'w'), ensure_ascii=False, indent=1)
+    Path(p).write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
     print('分组结果:')
     for g in out:
         print(f"  {g['name']:<12} {len(g['channel']):>3}")

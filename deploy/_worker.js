@@ -213,6 +213,10 @@ async function scopeByArtifact(g, env, origin, mode) {
   if (!def) return g;
   const want = def.buckets;
   if (want === 'all' || !Array.isArray(want)) return g;
+  // 产物可能同时含影视/成人两种聚合站：如果它的 buckets 里没有任何一项属于当前组，
+  // 说明这份产物没给这个组配分类，原样返回，别把整组筛成空。
+  const names = new Set((g.buckets || []).map((b) => b.name));
+  if (!want.some((n) => names.has(n))) return g;
   const buckets = (g.buckets || []).filter((b) => want.indexOf(b.name) >= 0);
   return { ...g, buckets };
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """拉取 tvbox.clbug.com 的 115 个订阅源，解析出其中的站点与直播源"""
-import json, re, urllib.request, ssl, concurrent.futures as cf
+import json, os, re, sys, urllib.request, ssl, concurrent.futures as cf
+from pathlib import Path
 
 UA = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                     '(KHTML, like Gecko) Chrome/120.0 Safari/537.36'}
@@ -8,10 +9,14 @@ CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
 
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
+
 
 def fetch(url, timeout=20):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+    with safe_http.open_request(req, timeout=timeout, context=CTX) as r:
         raw = r.read(4_000_000)
         enc = 'utf-8'
         ct = r.headers.get('Content-Type', '') or ''
@@ -85,7 +90,9 @@ if __name__ == '__main__':
     print('\n--- 失败源 ---')
     for r in [x for x in res if not x['ok']][:40]:
         print(f"  {r['idx']:>3} {r['name'][:14]:16} http={r['http']} {r['err']:<18} {r['url'][:52]}")
-    json.dump([{k: v for k, v in r.items() if k != 'cfg'} for r in res],
-              open('/app/working/fongmi-agg/debug/clbug_sources.json', 'w'), ensure_ascii=False, indent=1)
-    json.dump([{'name': r['name'], 'url': r['url'], 'cfg': r['cfg']} for r in ok],
-              open('/app/working/fongmi-agg/debug/clbug_cfgs.json', 'w'), ensure_ascii=False)
+    Path(BASE, 'debug', 'clbug_sources.json').write_text(
+        json.dumps([{k: v for k, v in r.items() if k != 'cfg'} for r in res],
+                   ensure_ascii=False, indent=1), encoding='utf-8')
+    Path(BASE, 'debug', 'clbug_cfgs.json').write_text(
+        json.dumps([{'name': r['name'], 'url': r['url'], 'cfg': r['cfg']} for r in ok],
+                   ensure_ascii=False), encoding='utf-8')

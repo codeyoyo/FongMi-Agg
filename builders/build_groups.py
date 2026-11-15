@@ -9,13 +9,17 @@ App 里不存在"站点分组"。所以"两个组"落地为两份配置：用户
 选哪一个，就是哪一组。两份都带同一套聚合直播。
 """
 import json, os
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
 
 kinds = json.load(open(os.path.join(BASE, 'state', 'kinds2.json')))
-js_sites = [s for s in json.load(open(os.path.join(BASE, 'backup', 'fongmi-pre-mode.json')))['sites']
-            if s.get('ext')]
+try:
+    js_sites = [s for s in json.load(open(os.path.join(BASE, 'backup', 'fongmi-pre-mode.json')))['sites']
+                if s.get('ext')]
+except FileNotFoundError:
+    js_sites = []
 
 try:
     _timing = {r['name']: r for r in json.load(open(os.path.join(BASE, 'state', 'search_timing.json')))}
@@ -69,7 +73,7 @@ def dump(sites, fname, label):
         out.append(s)
     cfg = {'sites': out, 'lives': LIVES}
     p = os.path.join(DIST, fname)
-    json.dump(cfg, open(p, 'w'), ensure_ascii=False, indent=1)
+    Path(p).write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f'{label:<10} {fname:<12} 站点 {len(out):>3}  文件 {os.path.getsize(p)} B')
 
 

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """把通过抽样的直播源合并成「按频道名归并、每频道挂多线路」的结构"""
-import json, os, re, ssl, urllib.request, concurrent.futures as cf
+import json, os, re, ssl, sys, urllib.request, concurrent.futures as cf
 from collections import defaultdict
+from pathlib import Path
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 CTX = ssl.create_default_context(); CTX.check_hostname = False; CTX.verify_mode = ssl.CERT_NONE
@@ -9,7 +14,7 @@ CTX = ssl.create_default_context(); CTX.check_hostname = False; CTX.verify_mode 
 
 def fetch(url, timeout=25, limit=8_000_000):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+    with safe_http.open_request(req, timeout=timeout, context=CTX) as r:
         return r.read(limit).decode('utf-8', 'ignore')
 
 
@@ -114,5 +119,6 @@ if __name__ == '__main__':
     for k, v in sorted(by_name.items(), key=lambda x: -len(x[1]))[:25]:
         print(f'  {len(v):>3} 线路  {v[0]["name"][:30]}')
 
-    json.dump({k: v for k, v in by_name.items()},
-              open('/app/working/fongmi-agg/state/live_merged.json', 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'live_merged.json')).write_text(
+        json.dumps({k: v for k, v in by_name.items()}, ensure_ascii=False, indent=1),
+        encoding='utf-8')

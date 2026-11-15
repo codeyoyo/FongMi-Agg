@@ -9,6 +9,8 @@
 """
 import argparse, concurrent.futures as cf, json, os, re, ssl, sys, time
 import urllib.request
+from pathlib import Path
+import safe_http
 from urllib.parse import urljoin
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,7 +25,7 @@ def get(url, timeout=10, limit=2 << 20, rng=None, headers=None):
     h = dict(UA); h.update(headers or {})
     req = urllib.request.Request(url, headers=h)
     if rng: req.add_header('Range', rng)
-    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+    with safe_http.open_request(req, timeout=timeout, context=CTX) as r:
         return r.status, r.read(limit), r.headers
 
 
@@ -234,13 +236,14 @@ def main():
         vod['lives'] = [{'name': g, 'type': 0, 'url': '', 'playerType': 1,
                          'epg': '', 'logo': '', 'groups': [{'name': g, 'channels': []}]}
                         for g, _, _ in ok_lives[:1]]
-    json.dump(vod, open(os.path.join(DIST, 'fongmi.json'), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(DIST, 'fongmi.json')).write_text(
+        json.dumps(vod, ensure_ascii=False, indent=1), encoding='utf-8')
 
     m3u = ['#EXTM3U']
     for g, n, u, score, kbps, _ in sorted(ok_lives, key=lambda x: -x[3]):
         m3u.append(f'#EXTINF:-1 group-title="{g}",{n} [{score}]')
         m3u.append(u)
-    open(os.path.join(DIST, 'live.m3u'), 'w').write('\n'.join(m3u) + '\n')
+    Path(os.path.join(DIST, 'live.m3u')).write_text('\n'.join(m3u) + '\n', encoding='utf-8')
 
     stats = {'built_at': time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()),
              'sources': len(urls), 'sources_ok': len(fetched),
@@ -248,7 +251,8 @@ def main():
              'lives_total': len(lives), 'lives_ok': len(ok_lives),
              'parses': meta['parses'], 'flags': meta['flags'], 'doh': meta['doh'],
              'site_detail': site_stats}
-    json.dump(stats, open(os.path.join(DIST, 'stats.json'), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(DIST, 'stats.json')).write_text(
+        json.dumps(stats, ensure_ascii=False, indent=1), encoding='utf-8')
 
     # 抽出发给 drpy 测活 worker 的 js 源清单
     def is_js(v):
@@ -271,7 +275,8 @@ def main():
         if m:
             base = m.group(1)
         js_sites.append({'name': s.get('name'), 'api': api, 'ext': ext, '_base': base})
-    json.dump(js_sites, open(os.path.join(DIST, 'sites_js.json'), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(DIST, 'sites_js.json')).write_text(
+        json.dumps(js_sites, ensure_ascii=False, indent=1), encoding='utf-8')
 
     print(f'\n输出：dist/fongmi.json（{len(ok_sites)} 站点） dist/live.m3u（{len(ok_lives)} 频道）')
     print(f'      dist/sites_js.json（{len(js_sites)} 个 js 源，待测活）')

@@ -7,13 +7,20 @@
 依赖：dist2/（仓库根）与本文件同目录的 _worker.js
 """
 import json, os, sys, urllib.request, uuid
+from pathlib import Path
 
-TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN') or open(
-    '/app/working/instabox-keepalive/.cf_token').read().strip()
+TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN', '')
+if not TOKEN:
+    try:
+        TOKEN = open('/app/working/instabox-keepalive/.cf_token').read().strip()
+    except FileNotFoundError:
+        raise SystemExit('缺 CLOUDFLARE_API_TOKEN（Uppcoder 等无该凭据文件的环境请用环境变量）')
 ACCT = os.environ.get('CLOUDFLARE_ACCOUNT_ID', 'fcffd8e2ea9a87b44fa8ba5e6f5d485c')
 PROJ = sys.argv[1] if len(sys.argv) > 1 else 'fongmi-sub'
 BASE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(BASE)
+sys.path.insert(0, os.path.join(ROOT, 'pipeline'))
+import safe_http  # noqa: E402
 API = 'https://api.cloudflare.com/client/v4'
 
 
@@ -26,10 +33,12 @@ def req(method, path, data=None, ctype='application/json'):
                                headers={'Authorization': f'Bearer {TOKEN}',
                                         'Content-Type': ctype})
     try:
-        with urllib.request.urlopen(r, timeout=120) as resp:
+        with safe_http.open_request(r, timeout=120) as resp:
             return json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
         return json.loads(e.read().decode())
+    except ValueError:
+        return {'success': False, 'errors': ['unsafe url']}
 
 
 def ensure_project():
@@ -50,13 +59,13 @@ def collect():
     """返回 [(相对路径, bytes)]"""
     out = []
     w = os.path.join(BASE, '_worker.js')
-    out.append(('_worker.js', open(w, 'rb').read()))
+    out.append(('_worker.js', Path(w).read_bytes()))
     for root in ('dist2',):
         for dirpath, _, files in os.walk(os.path.join(ROOT, root)):
             for f in files:
                 p = os.path.join(dirpath, f)
                 rel = os.path.relpath(p, os.path.join(ROOT, root))
-                out.append((rel, open(p, 'rb').read()))
+                out.append((rel, Path(p).read_bytes()))
     return out
 
 
@@ -86,10 +95,12 @@ def deploy(files):
         'Content-Type': f'multipart/form-data; boundary={boundary}',
     })
     try:
-        with urllib.request.urlopen(r, timeout=300) as resp:
+        with safe_http.open_request(r, timeout=300) as resp:
             return json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
         return json.loads(e.read().decode())
+    except ValueError:
+        return {'success': False, 'errors': ['unsafe url']}
 
 
 if __name__ == '__main__':

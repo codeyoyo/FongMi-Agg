@@ -8,6 +8,7 @@ sites 里就两条：
 两条都是 type:1（纯 HTTP 采集协议），FongMi 原生支持，设备端零依赖。
 """
 import json, os
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
@@ -40,5 +41,5 @@ cfg = {
 }
 
 p = os.path.join(DIST, 'two.json')
-json.dump(cfg, open(p, 'w'), ensure_ascii=False, indent=1)
+Path(p).write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding='utf-8')
 print('two.json 站点', len(cfg['sites']), '大小', os.path.getsize(p), 'B')

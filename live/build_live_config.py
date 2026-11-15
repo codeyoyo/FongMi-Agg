@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """把 merge 后的频道表生成为 FongMi 内嵌直播分组（每频道多线路，播放器自动 fallback）"""
 import json, re, os
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -373,5 +374,6 @@ if __name__ == '__main__':
             print(f'  [{gname}] {c["name"]:18} {len(c["urls"])} 线路  首条来源标签={c["urls"][0].split("$")[-1]}')
 
     live_groups = [{'name': g, 'channel': chs} for g, chs in groups.items() if chs]
-    json.dump(live_groups, open(os.path.join(BASE, 'state', 'live_groups.json'), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'live_groups.json')).write_text(
+        json.dumps(live_groups, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f'\n写入 live_groups.json：{len(live_groups)} 个分组')

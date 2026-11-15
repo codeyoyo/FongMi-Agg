@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """探测采集站的搜索接口：确认 FongMi 搜索不走的原因"""
-import json, re, urllib.request, urllib.parse, concurrent.futures as cf
+import json, os, re, urllib.request, urllib.parse, concurrent.futures as cf
+from pathlib import Path
+import safe_http
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 KW = '凡人修仙传'
@@ -8,7 +12,7 @@ KW = '凡人修仙传'
 
 def get(url, timeout=15):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with safe_http.open_request(req, timeout=timeout) as r:
         return r.read(400000).decode('utf-8', 'ignore')
 
 
@@ -73,4 +77,5 @@ if __name__ == '__main__':
     for r in zero[:8]:
         h = r['hits'][0] if r['hits'] else {}
         print(f"  {r['name'][:20]:22} n={h.get('n')} {h.get('err','')}")
-    json.dump(res, open('/app/working/fongmi-agg/state/search_probe.json', 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'search_probe.json')).write_text(
+        json.dumps(res, ensure_ascii=False, indent=1), encoding='utf-8')

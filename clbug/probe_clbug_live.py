@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """测 clbug 池的 84 个直播源：能否拉到列表 + 频道数 + 抽样探测分片可播性"""
-import json, re, ssl, time, urllib.request, concurrent.futures as cf
+import json, os, re, ssl, sys, time, urllib.request, concurrent.futures as cf
+from pathlib import Path
 from urllib.parse import urlparse
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
@@ -8,10 +9,14 @@ CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
 
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
+
 
 def fetch(url, timeout=20, limit=3_000_000):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+    with safe_http.open_request(req, timeout=timeout, context=CTX) as r:
         return r.read(limit).decode('utf-8', 'ignore'), r.status
 
 
@@ -70,4 +75,5 @@ if __name__ == '__main__':
     print('\n--- 失败 ---')
     for r in [x for x in res if not x['ok']][:20]:
         print(f"  {r['name'][:18]:20} {r['err']:<20} {r['url'][:52]}")
-    json.dump(res, open('/app/working/fongmi-agg/debug/clbug_live_probe.json', 'w'), ensure_ascii=False, indent=1)
+    Path(BASE, 'debug', 'clbug_live_probe.json').write_text(
+        json.dumps(res, ensure_ascii=False, indent=1), encoding='utf-8')

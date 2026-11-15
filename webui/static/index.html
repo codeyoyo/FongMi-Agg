@@ -33,6 +33,12 @@
   .tabs{display:flex;gap:6px;margin-bottom:12px}
   label{color:var(--dim);font-size:13px}
   .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line)}
+  .ms summary{cursor:pointer;background:#0b0e12;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px;color:#9fd0ff;list-style:none}
+  .ms summary::-webkit-details-marker{display:none}
+  .ms summary::after{content:" ▾";color:var(--dim)}
+  .ms[open] summary{border-color:var(--acc)}
+  .ms-list{display:flex;flex-direction:column;gap:6px;padding:8px 2px 2px}
+  .ms-list label{white-space:nowrap;color:var(--fg)}
 </style>
 </head>
 <body>
@@ -81,19 +87,30 @@ function codeClass(c){ return c === 200 ? 'ok' : c ? 'warn' : 'bad'; }
 
 async function renderDash(){
   const d = await api('/dashboard');
-  const a = d.artifacts, L = d.lives, R = d.last_run;
+  const a = d.artifacts || {}, L = d.lives, R = d.last_run, BT = d.built_at || {};
+  const artCards = Object.entries(a).map(([f, n]) =>
+    `<div class="card"><div class="k">${esc(f)}</div><div class="v">${n}</div><div class="k">${esc(BT[f] || '')}</div></div>`).join('');
+  const localUrls = (d.local_urls || []).map(u =>
+    `<a href="${esc(u)}" target="_blank" style="color:var(--acc)">${esc(u)}</a>`).join('<br>')
+    || '<span class="dim">未获取到本机地址</span>';
+  const cfUrl = (d.public_base || '') + '/fongmi.json';
   const pub = Object.entries(d.public || {}).map(([f, v]) =>
     `<tr><td>${f}</td><td class="${codeClass(v.code)}">${v.code || 'ERR'}</td>
      <td>${v.count ?? '-'}</td><td>${(v.bytes/1024).toFixed(0)} KB</td><td class="dim">${v.ms} ms</td></tr>`).join('');
   $('#dash').innerHTML = `
     <div class="cards">
-      <div class="card"><div class="k">干净版 clean</div><div class="v">${a.clean}</div><div class="k">${d.built_at['clean.json']||''}</div></div>
-      <div class="card"><div class="k">全量版 full</div><div class="v">${a.full}</div><div class="k">${d.built_at['full.json']||''}</div></div>
-      <div class="card"><div class="k">极简版 basic</div><div class="v">${a.basic}</div></div>
-      <div class="card"><div class="k">多仓 multi</div><div class="v">${a.multi}</div><div class="k">${d.built_at['multi.json']||''}</div></div>
+      ${artCards}
+      <div class="card"><div class="k">多仓 multi</div><div class="v">${d.multi ?? 0}</div><div class="k">${esc(BT['multi.json'] || '')}</div></div>
       <div class="card"><div class="k">直播</div><div class="v">${L.groups}<span class="dim" style="font-size:13px"> 组</span></div><div class="k">${L.channels} 个频道</div></div>
     </div>
-    <h3 style="font-size:14px;margin:18px 0 8px">五分类</h3>
+    <h3 style="font-size:14px;margin:18px 0 8px">订阅入口（两种方式）</h3>
+    <table><tr><th style="width:90px">方式</th><th>地址</th><th>说明</th></tr>
+      <tr><td>本机直供</td><td>${localUrls}</td>
+        <td class="dim">无需 Cloudflare；/movie、/adult 聚合接口也由本机提供。电视端把 127.0.0.1 换成本机局域网 IP。</td></tr>
+      <tr><td>Cloudflare</td><td><a href="${esc(cfUrl)}" target="_blank" style="color:var(--acc)">${esc(cfUrl)}</a></td>
+        <td class="dim">需在「运行」里勾选发布，或执行 deploy_pages.sh。</td></tr>
+    </table>
+    <h3 style="font-size:14px;margin:18px 0 8px">分类</h3>
     <div class="row">${(d.categories||[]).map(([n,c])=>`<span class="pill">${esc(n)} <b>${c}</b></span>`).join('') || '<span class="dim">未生成 agg_srcs.json</span>'}</div>
     <h3 style="font-size:14px;margin:18px 0 8px">线上入口（${d.public ? '实测' : '-'}）</h3>
     <table><tr><th>文件</th><th>状态</th><th>条数</th><th>大小</th><th>耗时</th></tr>${pub}</table>
@@ -256,79 +273,56 @@ async function saveCat(){
 }
 
 let DEFS = null;
+const TYPE_LABELS = {list:'直连列表', agg_movie:'聚合站·影视', agg_adult:'聚合站·成人'};
+
+function typesOf(a){
+  if (Array.isArray(a.types)) return a.types.filter(t => TYPE_LABELS[t]);
+  if (a.type === 'agg') return [a.group === 'adult' ? 'agg_adult' : 'agg_movie'];
+  return ['list'];
+}
 
 async function renderDefs(reload){
   // reload !== false 时从服务端拉最新（进页面）；本地编辑后重绘传 false，避免把未保存的改动冲掉
   if (reload !== false) {
     const d = await api('/artifact-defs');
-    DEFS = {artifacts: d.artifacts || [], buckets: d.buckets || [], groups: d.groups || [],
-            pools: d.pools || ['clean','full']};
+    DEFS = {artifacts: d.artifacts || []};
   }
-  const grpKey = (a) => ({movie: 'other', adult: 'adult'})[a.group || 'movie'] || 'other';
-  const grpLabel = (k) => (DEFS.groups.find(x => x.key === k) || {}).label || k;
-  const bucketsOf = (a) => {
-    const g = DEFS.groups.find(x => x.key === grpKey(a));
-    return g ? g.buckets : DEFS.buckets;
-  };
   const rows = DEFS.artifacts.map((a, i) => {
-    const ticked = (b) => a.buckets === 'all' || (Array.isArray(a.buckets) && a.buckets.indexOf(b) >= 0);
-    const buckets = bucketsOf(a);
-    const boxes = (a.type === 'agg')
-      ? '<span class="dim" style="font-size:12px;margin-right:6px">' + esc(grpLabel(grpKey(a))) + '</span>'
-        + buckets.map(b => '<label style="margin-right:8px;white-space:nowrap">'
-          + '<input type="checkbox" data-i="' + i + '" data-b="' + esc(b) + '" ' + (ticked(b) ? 'checked' : '') + '> '
-          + esc(b) + '</label>').join('')
-      : '<span class="dim" style="font-size:12px">直连列表没有分类层（分类只对聚合站产物生效）</span>';
+    const sel = typesOf(a);
+    const summary = sel.map(t => TYPE_LABELS[t]).join(' + ') || '未选择';
+    const boxes = Object.keys(TYPE_LABELS).map(k =>
+      '<label><input type="checkbox" data-i="' + i + '" data-t="' + k + '" '
+      + (sel.indexOf(k) >= 0 ? 'checked' : '') + '> ' + esc(TYPE_LABELS[k]) + '</label>').join('');
     return '<tr>'
       + '<td><input data-i="' + i + '" data-f="name" value="' + esc(a.name || '') + '" style="width:100%;background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px"></td>'
-      + '<td><input data-i="' + i + '" data-f="file" value="' + esc(a.file || '') + '" style="width:100%;background:#0b0e12;color:#9fd0ff;border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px"></td>'
-      + '<td><select data-i="' + i + '" data-f="type" style="background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px">'
-      + '<option value="list" ' + ((a.type || 'list') === 'list' ? 'selected' : '') + '>直连列表</option>'
-      + '<option value="agg|movie" ' + (a.type === 'agg' && (a.group || 'movie') === 'movie' ? 'selected' : '') + '>聚合站·影视</option>'
-      + '<option value="agg|adult" ' + (a.type === 'agg' && a.group === 'adult' ? 'selected' : '') + '>聚合站·成人</option>'
-      + '</select></td>'
-      + '<td><select data-i="' + i + '" data-f="pool" style="background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px">'
-      + DEFS.pools.map(x => '<option ' + (a.pool === x ? 'selected' : '') + '>' + x + '</option>').join('') + '</select></td>'
-      + '<td><label><input type="checkbox" data-i="' + i + '" data-f="include_js" ' + (a.include_js ? 'checked' : '') + '> js</label>'
-      + '<label style="margin-left:8px"><input type="checkbox" data-i="' + i + '" data-f="lives" ' + (a.lives ? 'checked' : '') + '> 直播</label>'
-      + '<label style="margin-left:8px"><input type="checkbox" data-i="' + i + '" data-f="enabled" ' + (a.enabled !== false ? 'checked' : '') + '> 启用</label></td>'
-      + '<td style="min-width:250px">' + boxes + '</td>'
+      + '<td><input data-i="' + i + '" data-f="file" value="' + esc(a.file || '') + '" style="width:100%;background:#0b0e12;color:#9fd0ff;border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px">'
+      + '<a href="#" onclick="previewDef(' + i + ');return false" style="display:inline-block;margin-top:3px;color:var(--acc);font-size:12px">预览</a></td>'
+      + '<td style="min-width:220px"><details class="ms" data-i="' + i + '">'
+      + '<summary>' + esc(summary) + '</summary>'
+      + '<div class="ms-list">' + boxes + '</div></details></td>'
       + '<td style="width:36px"><a href="#" onclick="delDef(' + i + ');return false" style="color:var(--bad)">删</a></td>'
       + '</tr>';
   }).join('');
-  $('#art').innerHTML = '<h3 style="font-size:14px;margin:0 0 8px">产物定义（想留几个留几个，分类自己勾）</h3>'
-    + '<table><tr><th style="width:110px">名称</th><th style="width:130px">文件名</th><th style="width:90px">类型</th><th style="width:80px">站点池</th>'
-    + '<th style="width:180px">包含</th><th>分类（来自「分类」tab）</th><th></th></tr>' + rows + '</table>'
+  $('#art').innerHTML = '<h3 style="font-size:14px;margin:0 0 8px">产物定义（想留几个留几个，类型可多选）</h3>'
+    + '<table><tr><th style="width:120px">名称</th><th style="width:150px">文件名</th>'
+    + '<th style="width:240px">类型（可多选）</th><th></th></tr>' + rows + '</table>'
     + '<div class="row" style="margin-top:10px"><button onclick="addDef()">+ 再加一个产物</button>'
     + '<button class="primary" onclick="saveDefs()">保存产物定义</button><span id="defMsg" class="dim"></span></div>'
-    + '<p class="dim" style="margin:8px 0 0">池：clean=三层全通（少而稳）/ full=全量（多而杂）；分类全勾=all。<br>'
-    + '分类勾选项直接读「分类」tab 的桶（改桶名/加删桶后这里自动跟着变）：聚合站产物按勾选分类真筛源，'
-    + '直连列表没有分类层。保存后重跑「07 生成」才出文件。</p>'
+    + '<p class="dim" style="margin:8px 0 0">类型可多选：直连列表 = 按站点池直连；聚合站 = 挂服务端聚合入口。'
+    + '已有产物的池 / js / 直播 / 分类设置保留在文件里继续生效。保存后重跑「07 生成」才出文件。</p>'
     + '<div id="artFiles" style="margin-top:22px"></div>';
-  document.querySelectorAll('#art input, #art select').forEach(el => {
+  document.querySelectorAll('#art input[data-f], #art input[data-t]').forEach(el => {
     el.onchange = () => {
-      const i = +el.dataset.i, f = el.dataset.f, a = DEFS.artifacts[i];
-      if (el.type === 'checkbox' && el.dataset.b) {
-        const bl = bucketsOf(a);
-        const cur = a.buckets === 'all' ? bl.slice() : (a.buckets || []).slice();
-        const set = new Set(cur);
-        if (el.checked) set.add(el.dataset.b); else set.delete(el.dataset.b);
-        a.buckets = (set.size === bl.length) ? 'all' : [...set];
-      } else if (el.type === 'checkbox') {
-        a[f] = el.checked;
-      } else if (f === 'type') {
-        const v = el.value;
-        if (v === 'list') { a.type = 'list'; }
-        else { a.type = 'agg'; a.group = v.split('|')[1] || 'movie'; }
-        if (a.type === 'agg' && Array.isArray(a.buckets)) {
-          const bl = bucketsOf(a);
-          a.buckets = a.buckets.filter(x => bl.indexOf(x) >= 0);
-          if (!a.buckets.length) a.buckets = 'all';
-        }
-        renderDefs(false); return;
+      const i = +el.dataset.i, a = DEFS.artifacts[i];
+      if (el.dataset.t) {
+        const cur = new Set(typesOf(a));
+        if (el.checked) cur.add(el.dataset.t); else cur.delete(el.dataset.t);
+        a.types = ['list', 'agg_movie', 'agg_adult'].filter(t => cur.has(t));
+        const det = el.closest('details');
+        if (det) det.querySelector('summary').textContent =
+          a.types.map(t => TYPE_LABELS[t]).join(' + ') || '未选择';
       } else {
-        a[f] = el.value.trim();
-        if (f === 'name' && !a.id) a.id = el.value.trim();
+        a[el.dataset.f] = el.value.trim();
       }
     };
   });
@@ -338,7 +332,7 @@ async function renderDefs(reload){
 function addDef(){
   const n = DEFS.artifacts.length + 1;
   DEFS.artifacts.push({id: 'art' + n, file: 'art' + n + '.json', name: '新产物' + n,
-    pool: 'clean', include_js: true, lives: true, buckets: 'all', enabled: true});
+    types: ['list'], pool: 'clean', include_js: true, lives: true, buckets: 'all', enabled: true});
   renderDefs(false);
 }
 function delDef(i){
@@ -347,6 +341,11 @@ function delDef(i){
   DEFS.artifacts.splice(i, 1); renderDefs(false);
 }
 async function saveDefs(){
+  const bad = DEFS.artifacts.find(a => !typesOf(a).length);
+  if (bad) {
+    $('#defMsg').innerHTML = '<span class="bad">产物「' + esc(bad.name || bad.id) + '」至少要选一种类型</span>';
+    return;
+  }
   const r = await fetch('/api/artifact-defs', {method: 'POST', headers: {'content-type': 'application/json'},
     body: JSON.stringify({artifacts: DEFS.artifacts})}).then(x => x.json()).catch(e => ({detail: String(e)}));
   if (r.detail) { $('#defMsg').innerHTML = '<span class="bad">保存失败：' + esc(r.detail) + '</span>'; return; }
@@ -359,7 +358,11 @@ async function renderArtFiles(){
   const HOST = $('#artFiles') || $('#art');
   const rows = d.files.map(f => `<tr><td>${esc(f.file)}</td><td>${f.kind||''}</td><td>${f.count ?? '-'}</td>
     <td>${(f.bytes/1024).toFixed(1)} KB</td><td class="dim">${f.mtime}</td>
-    <td>${f.file.endsWith('.json')?`<a href="#" onclick="preview('${esc(f.file)}');return false" style="color:var(--acc)">预览</a>`:''}</td></tr>`).join('');
+    <td>${f.file.endsWith('.json')
+      ? `<a href="#" onclick="preview('${esc(f.file)}');return false" style="color:var(--acc)">预览</a>
+         <a href="${location.origin}/${esc(f.file)}" target="_blank" rel="noreferrer" style="color:var(--acc);margin-left:8px">订阅</a>`
+      : ''}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="dim">还没有产物文件（dist2 为空）。先跑「07 生成」，生成后这里会出现文件列表和预览链接。</td></tr>';
   const snaps = (sp.snapshots || []).map((x, i) => {
     const cf = x.files['clean.json'] || {}, ff = x.files['full.json'] || {};
     return `<tr><td><code>${esc(x.id)}</code></td><td class="dim">${esc(x.created||'')}</td>
@@ -370,7 +373,9 @@ async function renderArtFiles(){
   HOST.innerHTML = `<table><tr><th>文件</th><th>类型</th><th>条数</th><th>大小</th><th>生成时间</th><th></th></tr>${rows}</table>
     <h3 style="font-size:14px;margin:20px 0 8px">产物快照（可回滚）</h3>
     <table><tr><th>快照</th><th>时间</th><th>clean/full</th><th>内容</th><th></th></tr>${snaps}</table>
-    <pre id="prev" style="margin-top:12px" class="dim">点上面的「预览」看前 20 项</pre>`;
+    <pre id="prev" style="margin-top:12px" class="dim">${d.files.length
+      ? '点上面的「预览」看前 20 项'
+      : '还没有可预览的产物文件：dist2 为空。定义里的文件名是目标文件名，不代表文件已经生成；先跑「07 生成」。'}</pre>`;
 }
 
 async function restoreSnap(id){
@@ -391,6 +396,21 @@ async function preview(f){
     String(i + 1).padStart(2, ' ') + '. ' + (x.name ?? '') +
     (x.total ? '   [' + x.total + ']' : '') + '\n    ' + (x.url ?? ''));
   $('#prev').textContent = r.file + '   共 ' + r.total + ' 项，显示前 ' + r.shown + ' 项\n\n' + lines.join('\n');
+}
+
+async function previewDef(i){
+  const a = DEFS.artifacts[i];
+  const f = a.file || (a.id + '.json');
+  const d = await api('/artifacts');
+  if ((d.files || []).some(x => x.file === f)) return preview(f);
+  $('#prev').textContent = f + ' 还没生成（dist2 里没有这个文件）。\n\n'
+    + '定义里的文件名是目标文件名，不代表文件已经生成；先跑「07 生成」，生成后这里就能预览前 20 项。\n\n'
+    + '当前界面里的定义（含未保存改动）：\n' + JSON.stringify({
+      id: a.id, name: a.name, file: f, types: typesOf(a),
+      pool: a.pool, include_js: a.include_js, lives: a.lives,
+      buckets: a.buckets, enabled: a.enabled
+    }, null, 2);
+  $('#prev').scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
 
 async function renderHist(){
@@ -421,7 +441,7 @@ function renderRun(){
       <span id="runMsg" class="dim"></span>
     </div>
     <p class="dim">全流程 = 拉源 → 测活 → 去重 → 分类 → 三层验证 → 搜索测速 → 生成 → 部署。
-    本机实测 8–15 分钟；「只生成」跳过测活，2–4 分钟。</p>
+    本机实测 8–15 分钟；「只生成」复用上次测活结果直接重建产物，需先成功跑过一次全流程。</p>
     <pre id="live" class="dim">尚未开始</pre>`;
   $('#btnFull').onclick = () => start({deploy: $('#chkDeploy').checked});
   $('#btnBuild').onclick = () => start({deploy: $('#chkDeploy').checked, skip_probe: true});

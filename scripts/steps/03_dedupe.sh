@@ -2,7 +2,7 @@
 # 03 去重：state/ok_api.json → state/ok_api_final.json（同域名留最强，同片库去重）
 source "$(dirname "$0")/_common.sh"
 
-$PY - <<'PY' || exit 30
+"$PY" - <<'PY' || exit 30
 import json, urllib.parse
 from collections import defaultdict
 ok=json.load(open('state/ok_api.json'))
@@ -23,8 +23,8 @@ for x in best:
 json.dump(uniq,open('state/ok_api_final.json','w'),ensure_ascii=False,indent=1)
 tot=sum(int(x.get('_total') or 0) for x in uniq)
 print(f'独立源 {len(uniq)}，合计 {tot:,} 部')
-open('/tmp/dedupe_count.txt','w').write(f'{len(uniq)} {tot}')
+open('state/tmp/dedupe_count.txt','w').write(f'{len(uniq)} {tot}')
 PY
-read N TOT < /tmp/dedupe_count.txt
+read N TOT < state/tmp/dedupe_count.txt
 counters "{\"unique\": $N, \"total\": $TOT}"
 exit 0

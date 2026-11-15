@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """测每个采集站的搜索耗时，用于给 clean 版排序（快的在前）"""
-import json, re, time, urllib.request, urllib.parse, concurrent.futures as cf
+import json, os, re, time, urllib.request, urllib.parse, concurrent.futures as cf
+from pathlib import Path
+import safe_http
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STATE = os.path.join(BASE, 'state')
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 KW = '凡人修仙传'
@@ -10,7 +15,7 @@ def timed_get(url, timeout=10):
     req = urllib.request.Request(url, headers=UA)
     t0 = time.time()
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with safe_http.open_request(req, timeout=timeout) as r:
             body = r.read(400000).decode('utf-8', 'ignore')
         return body, (time.time() - t0) * 1000, None
     except Exception as e:
@@ -42,7 +47,7 @@ def probe(site):
 
 
 if __name__ == '__main__':
-    sites = json.load(open('/app/working/fongmi-agg/state/sites_verified_pool.json'))
+    sites = json.load(open(os.path.join(STATE, 'sites_verified_pool.json')))
     with cf.ThreadPoolExecutor(12) as ex:
         res = list(ex.map(probe, sites))
 
@@ -56,4 +61,5 @@ if __name__ == '__main__':
     print('\n搜不到:')
     for r in bad:
         print(f"  {r['ms']:>5}ms  {r['name'][:22]}  {r['err'] or 'empty'}")
-    json.dump(res, open('/app/working/fongmi-agg/state/search_timing.json', 'w'), ensure_ascii=False, indent=1)
+    Path(STATE, 'search_timing.json').write_text(
+        json.dumps(res, ensure_ascii=False, indent=1), encoding='utf-8')

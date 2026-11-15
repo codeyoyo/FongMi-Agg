@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """对候选直播源抽样测分片：判断"列表可拉"之外，频道是否真能播"""
-import json, re, ssl, time, urllib.request, concurrent.futures as cf
+import json, os, re, ssl, sys, time, urllib.request, concurrent.futures as cf
+from pathlib import Path
 from urllib.parse import urljoin
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 
 CANDIDATES = [
     'https://gh-proxy.com/https://raw.githubusercontent.com/',
@@ -22,7 +27,7 @@ CANDIDATES = [
 
 def fetch(url, timeout=15, limit=400_000):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+    with safe_http.open_request(req, timeout=timeout, context=CTX) as r:
         return r.read(limit), r.headers.get('Content-Type', '')
 
 
@@ -116,4 +121,5 @@ if __name__ == '__main__':
     print(f'\n通过抽样（≥40% 可播）: {len(keep)}')
     for k in keep:
         print(f"  {k['ch']:>5}频道 {k['rate']:.0%}  {k['name'][:20]:22} {k['url'][:56]}")
-    json.dump(keep, open('/app/working/fongmi-agg/debug/clbug_live_kept.json', 'w'), ensure_ascii=False, indent=1)
+    Path(BASE, 'debug', 'clbug_live_kept.json').write_text(
+        json.dumps(keep, ensure_ascii=False, indent=1), encoding='utf-8')

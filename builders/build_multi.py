@@ -7,6 +7,7 @@ FongMi 的「配置」页支持多仓（{"urls":[{name,url}]}）——加一条�
 只收录实测能拉到的配置：每个 URL 探测一次，200 且首字符是 { 或能解析出站点才算。
 """
 import json, os, sys
+from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'pipeline'))
 from load_manual import fetch, parse_config  # noqa: E402
 
@@ -40,7 +41,7 @@ def main():
 
     out = os.path.join(BASE, 'dist', 'multi.json')
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    json.dump({'urls': urls}, open(out, 'w'), ensure_ascii=False, indent=1)
+    Path(out).write_text(json.dumps({'urls': urls}, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f"\n多仓 {len(urls)} 条 → {out}")
     if bad:
         print('跳过:', ', '.join(bad))

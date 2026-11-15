@@ -8,6 +8,7 @@
 """
 import json, os, sys
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from classify_sites import classify, NAME_WORDS  # noqa: E402
@@ -60,8 +61,8 @@ def main():
     for s in sorted(out, key=lambda x: -x.get('_total', 0)):
         if s['_kind'] != 'clean':
             print(f"  {s['_kind']:<12} rate={s.get('_rate')} {str(s['name'])[:16]}")
-    json.dump(out, open(os.path.join(BASE, 'state', 'kinds_all.json'), 'w'),
-              ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'kinds_all.json')).write_text(
+        json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
     print('→ kinds_all.json')
 
 

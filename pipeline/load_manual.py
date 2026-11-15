@@ -9,6 +9,8 @@
 """
 import json, os, re, sys, time
 import urllib.request, urllib.error, urllib.parse
+from pathlib import Path
+import safe_http
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MANUAL = os.path.join(BASE, 'config', 'manual_sources.json')
@@ -29,7 +31,7 @@ def fetch(url):
     except Exception:
         pass
     req = urllib.request.Request(url, headers={'User-Agent': UA})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+    with safe_http.open_request(req, timeout=TIMEOUT) as r:
         raw = r.read()
     for enc in ('utf-8', 'gbk', 'latin-1'):
         try:
@@ -300,13 +302,13 @@ def main():
             continue
         seen.add(k); uj.append(s)
 
-    json.dump(uq, open(os.path.join(BASE, 'state', 'manual_vod_sites.json'), 'w'),
-              ensure_ascii=False, indent=1)
-    json.dump(uj, open(os.path.join(BASE, 'state', 'manual_js_sites.json'), 'w'),
-              ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'manual_vod_sites.json')).write_text(
+        json.dumps(uq, ensure_ascii=False, indent=1), encoding='utf-8')
+    Path(os.path.join(BASE, 'state', 'manual_js_sites.json')).write_text(
+        json.dumps(uj, ensure_ascii=False, indent=1), encoding='utf-8')
     if live_items or not os.path.exists(os.path.join(BASE, 'state', 'manual_live.json')):
-        json.dump(ul, open(os.path.join(BASE, 'state', 'manual_live.json'), 'w'),
-                  ensure_ascii=False, indent=1)
+        Path(os.path.join(BASE, 'state', 'manual_live.json')).write_text(
+            json.dumps(ul, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f"\n去重后：采集 {len(uq)} 个，js {len(uj)} 个，直播 {len(ul)} 条线路")
     if errs:
         print('失败:', ', '.join(errs))

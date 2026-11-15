@@ -8,6 +8,8 @@
 只输出命中率与判定，不输出标题原文。
 """
 import json, re, sys, urllib.request
+from pathlib import Path
+import safe_http
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 
@@ -26,7 +28,7 @@ def fetch_titles(api, typ):
     sep = '&' if '?' in api else '?'
     url = api + sep + ('ac=videolist&at=xml&pg=1' if typ == 0 else 'ac=videolist&pg=1')
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=15) as r:
+    with safe_http.open_request(req, timeout=15) as r:
         body = r.read(300000).decode('utf-8', 'ignore')
     if typ == 0:
         return re.findall(r'<name><!\[CDATA\[(.*?)\]\]></name>', body)[:20] or \
@@ -68,7 +70,8 @@ def main():
     clean.sort(key=lambda x: -x.get('_total', 0))
     for s in clean[:15]:
         print(f"  {s.get('_total', 0):>8} 部  rate={s['_rate']}  {str(s['name'])[:20]}")
-    json.dump(clean, open('state/sites_clean.json', 'w'), ensure_ascii=False, indent=1)
+    Path('state/sites_clean.json').write_text(
+        json.dumps(clean, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f'\n合计正经片库 ≈ {sum(s.get("_total",0) for s in clean):,} 部')
 
 

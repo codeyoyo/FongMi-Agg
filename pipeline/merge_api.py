@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """merge_api.py —— 把实测采集站合并进订阅，生成精简版和完整版"""
 import json, os, shutil
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
@@ -34,7 +35,8 @@ def build(n_api, fname):
     for k in ('parses', 'flags', 'doh'):
         if base_cfg.get(k):
             cfg[k] = base_cfg[k]
-    json.dump(cfg, open(os.path.join(DIST, fname), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(DIST, fname)).write_text(
+        json.dumps(cfg, ensure_ascii=False, indent=1), encoding='utf-8')
     total = sum(x['_total'] for x in api[:n_api])
     print(f'{fname}: {len(cfg["sites"])} 站点（{n_api} 采集 + {len(js_sites)} js）片库 ≈ {total:,}')
     return len(cfg['sites'])

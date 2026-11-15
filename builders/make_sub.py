@@ -10,6 +10,7 @@
   dist2/  （fongmi.json + lib/ + js/）
 """
 import json, os, re, shutil, sys
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(BASE, 'dist2')
@@ -123,7 +124,8 @@ def main():
         extra = json.load(open(fb))
         cfg.update({k: v for k, v in extra.items() if k not in cfg})
 
-    json.dump(cfg, open(os.path.join(DIST, 'fongmi.json'), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(DIST, 'fongmi.json')).write_text(
+        json.dumps(cfg, ensure_ascii=False, indent=1), encoding='utf-8')
 
     print(f'站点 {len(out)}（js {sum(1 for x in out if x["type"]==3 and x.get("ext"))}'
           f' / http {sum(1 for x in out if str(x.get("api","")).startswith("http"))}）')

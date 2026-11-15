@@ -1,9 +1,14 @@
 """最小闭环验证：解析 VodConfig -> 测活 type 0/1 站点 -> 输出可用 vod.json
 只做可行性验证，不是完整实现。"""
-import json, time, ssl, urllib.request, concurrent.futures as cf, sys
+import json, time, ssl, urllib.request, concurrent.futures as cf, sys, os
+from pathlib import Path
 
 ctx = ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
 UA = {'User-Agent': 'okhttp/3.15'}
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 
 def load(path):
     d = json.load(open(path))
@@ -22,7 +27,7 @@ def probe_site(s, timeout=8):
     url = api + ('&' if '?' in api else '?') + 'ac=list'
     t = time.time()
     try:
-        r = urllib.request.urlopen(urllib.request.Request(url, headers={**UA, **(s.get('header') or {})}),
+        r = safe_http.open_request(urllib.request.Request(url, headers={**UA, **(s.get('header') or {})}),
                                    timeout=timeout, context=ctx)
         body = r.read(200000)
         ms = round((time.time() - t) * 1000)
@@ -67,8 +72,8 @@ def main():
     # 输出：只保留通过的 HTTP 站点 + 原样保留 lives/parses/spider（lives 未测）
     out = {k: v for k, v in d.items() if k in ('spider', 'lives', 'parses', 'flags', 'doh', 'rules', 'headers', 'logo', 'wallpaper')}
     out['sites'] = alive
-    path = '/app/working/fongmi-agg/prototype/sample-vod.json'
-    json.dump(out, open(path, 'w'), ensure_ascii=False, indent=1)
+    path = os.path.join(BASE, 'prototype', 'sample-vod.json')
+    Path(path).write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f"\n已输出 {path}（{len(alive)} 站点 / {len(out.get('lives') or [])} 直播源）")
 
     # 结构合规性自检

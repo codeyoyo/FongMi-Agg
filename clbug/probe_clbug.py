@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """对 clbug 池里的 HTTP 采集站测活：ac=list 校验 + 片库量 + 响应耗时"""
-import json, re, time, urllib.request, ssl, concurrent.futures as cf
+import json, os, re, sys, time, urllib.request, ssl, concurrent.futures as cf
+from pathlib import Path
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 
 
 def norm_api(api):
@@ -17,7 +22,7 @@ def norm_api(api):
 
 def get(url, timeout=12):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+    with safe_http.open_request(req, timeout=timeout, context=CTX) as r:
         return r.read(600000).decode('utf-8', 'ignore')
 
 
@@ -88,4 +93,5 @@ if __name__ == '__main__':
     for r in fails[:20]:
         print(f"  {r['name'][:20]:22} {r['err']:<15} {r['api'][:55]}")
 
-    json.dump(res, open('/app/working/fongmi-agg/debug/clbug_probe.json', 'w'), ensure_ascii=False, indent=1)
+    Path(BASE, 'debug', 'clbug_probe.json').write_text(
+        json.dumps(res, ensure_ascii=False, indent=1), encoding='utf-8')

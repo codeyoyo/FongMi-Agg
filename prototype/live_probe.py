@@ -1,8 +1,13 @@
 """直播源测活：txt(频道名,url + #genre#) / m3u -> 并发探测 -> 评分 -> 输出 m3u
 判据：能取到主播放列表 -> 能取到子流/分片 -> 计时与吞吐
 """
-import re, time, ssl, json, sys, urllib.request, concurrent.futures as cf
+import os, re, time, ssl, json, sys, urllib.request, concurrent.futures as cf
+from pathlib import Path
 from urllib.parse import urljoin
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 
 ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36'}
@@ -48,7 +53,7 @@ def _get(url, rng=None, timeout=6, limit=131072):
     req = urllib.request.Request(url, headers=UA)
     if rng: req.add_header('Range', rng)
     t = time.time()
-    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
+    with safe_http.open_request(req, timeout=timeout, context=ctx) as r:
         data = r.read(limit)
         return r.status, data, (time.time() - t) * 1000
 
@@ -90,7 +95,7 @@ def probe(item):
 
 def main():
     src = sys.argv[1]
-    raw = urllib.request.urlopen(urllib.request.Request(src, headers=UA), timeout=15, context=ctx).read().decode('utf-8', 'ignore')
+    raw = safe_http.open_request(urllib.request.Request(src, headers=UA), timeout=15, context=ctx).read().decode('utf-8', 'ignore')
     items = parse_m3u(raw) if ('#EXTM3U' in raw or src.endswith('.m3u')) else parse_txt(raw)
     print(f"源: {src}\n频道条目: {len(items)}（去重前）")
     seen, uniq = set(), []
@@ -112,8 +117,8 @@ def main():
     for group, name, url, score, kbps, _ in sorted(ok, key=lambda x: -x[3]):
         out.append(f'#EXTINF:-1 group-title="{group}",{name} [{score}]')
         out.append(url)
-    p = '/app/working/fongmi-agg/prototype/sample-live.m3u'
-    open(p, 'w').write('\n'.join(out) + '\n')
+    p = os.path.join(BASE, 'prototype', 'sample-live.m3u')
+    Path(p).write_text('\n'.join(out) + '\n', encoding='utf-8')
     print(f"已输出 {p}（{len(ok)} 条）")
 
 if __name__ == '__main__':

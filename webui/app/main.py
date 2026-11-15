@@ -1,24 +1,52 @@
 #!/usr/bin/env python3
-"""fongmi-admin —— fongmi-agg 的 Web 管理台（P0）
+"""fongmi-admin —— fongmi-agg 的 Web 管理台 + 本机订阅服务
 
-只做三件事：看状态、编辑不了但能看源清单、一键触发流水线。
-所有算法仍在 /app/working/fongmi-agg 的脚本里，这里只是编排器。
+管理台：看状态、编辑源/分类/产物、一键触发流水线。
+订阅：/fongmi.json、/movie.json 等静态产物 + /movie、/adult 聚合接口，
+      无需 Cloudflare；返回配置时按请求地址改写成当前 host。
+      聚合实现见 app/aggregate.py（与 deploy/_worker.js 协议一致）。
 
-启动：bin/admin.sh start        （监听 127.0.0.1:8123）
+启动：bin/admin.sh start（默认 0.0.0.0:8123；ADMIN_HOST=127.0.0.1 仅本机）
 """
-import json, os, subprocess, time, urllib.request, datetime
+import json, os, re, socket, subprocess, time, datetime
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+try:
+    from . import aggregate
+except ImportError:                     # 兼容直接以脚本方式导入
+    import aggregate
+
 HOME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))          # fongmi-admin
-REPO = os.environ.get('FONGMI_REPO', '/app/working/fongmi-agg')
+# 默认仓库根：本仓库里 webui/ 的上一级就是根；容器里 admin 是独立副本，
+# 上一级没有 pipeline/，回退到原来的 /app/working/fongmi-agg。
+_DEFAULT_REPO = os.path.dirname(HOME)
+if not os.path.isdir(os.path.join(_DEFAULT_REPO, 'pipeline')):
+    _DEFAULT_REPO = '/app/working/fongmi-agg'
+REPO = os.environ.get('FONGMI_REPO', _DEFAULT_REPO)
 PIPELINE = os.path.join(REPO, 'pipeline', 'run_step.py')
 RUNS = os.path.join(REPO, 'state', 'runs')
 DIST2 = os.path.join(REPO, 'dist2')
 DATA = os.path.join(HOME, 'data')
 PUBLIC = os.environ.get('FONGMI_PUBLIC', 'https://fm.le138.de5.net')
 PY = os.environ.get('FONGMI_PY', 'python3')
+
+# 本机订阅入口：与 Cloudflare Worker 的 ?mode= 口径保持一致
+LOCAL_MODE_MAP = {
+    'two': 'two.json', 'movie': 'movie.json', 'full': 'full.json',
+    'clean': 'clean.json', 'basic': 'basic.json',
+    'other': 'other.json', 'adult': 'adult.json',
+}
+# 配置里聚合站写的是这个地址；本机返回时按请求 host 改写，同一份 dist2 两处都能用
+PUBLIC_BASES = []
+for _b in (PUBLIC, os.environ.get('FONGMI_AGG_BASE', ''),
+           'https://fm.le138.de5.net', 'http://fm.le138.de5.net'):
+    if _b:
+        _b = _b.rstrip('/')
+        if _b not in PUBLIC_BASES:
+            PUBLIC_BASES.append(_b)
 
 os.makedirs(DATA, exist_ok=True)
 app = FastAPI(title='fongmi-admin', version='0.1.0-p0')
@@ -61,19 +89,16 @@ def probe_public(ttl=90):
     out = {}
     for name in ('fongmi.json', 'clean.json', 'full.json', 'basic.json', 'multi.json'):
         t0 = time.time()
-        try:
-            req = urllib.request.Request(f'{PUBLIC}/{name}',
-                                         headers={'User-Agent': 'fongmi-admin/0.1'})
-            with urllib.request.urlopen(req, timeout=12) as r:
-                body = r.read(4000000)
-            code, size = r.status, len(body)
+        body = aggregate.fetch_text(PUBLIC.rstrip('/') + '/' + name, 12)
+        if body is None:
+            code, size, n = 0, 0, None
+        else:
+            code, size = 200, len(body.encode('utf-8', 'ignore'))
             try:
-                d = json.loads(body.decode('utf-8', 'ignore'))
+                d = json.loads(body)
                 n = len(d.get('urls') or []) if 'urls' in d else len(d.get('sites') or [])
             except Exception:
                 n = None
-        except Exception as e:
-            code, size, n = 0, 0, None
         out[name] = {'code': code, 'bytes': size, 'count': n,
                      'ms': int((time.time() - t0) * 1000)}
     _probe_cache.update(ts=time.time(), data=out)
@@ -111,9 +136,75 @@ def _basic_ok(header):
     return u == ADMIN_USER and pw == exp
 
 
+def _request_origin(request):
+    proto = (request.headers.get('x-forwarded-proto') or request.url.scheme or 'http').split(',')[0].strip()
+    host = (request.headers.get('x-forwarded-host') or request.headers.get('host')
+            or request.url.netloc).split(',')[0].strip()
+    return '%s://%s' % (proto, host)
+
+
+def _rewrite_base(obj, origin):
+    """把配置里的 Cloudflare 聚合地址换成本机访问地址；同一份 dist2 两处通用"""
+    if isinstance(obj, str):
+        for b in PUBLIC_BASES:
+            if obj == b or obj.startswith(b + '/'):
+                return origin + obj[len(b):]
+        return obj
+    if isinstance(obj, list):
+        return [_rewrite_base(x, origin) for x in obj]
+    if isinstance(obj, dict):
+        return {k: _rewrite_base(v, origin) for k, v in obj.items()}
+    return obj
+
+
+def _artifact_json(fname, request):
+    if (not fname or os.path.basename(fname) != fname
+            or fname.startswith('.') or '..' in fname or not fname.endswith('.json')):
+        raise HTTPException(400, '非法产物文件名')
+    p = os.path.join(DIST2, fname)
+    if not os.path.isfile(p) and fname == 'artifacts.json':
+        p = os.path.join(REPO, 'config', 'artifacts.json')
+    if not os.path.isfile(p):
+        raise HTTPException(404, '没有这个产物：' + fname)
+    try:
+        with open(p, encoding='utf-8') as fh:
+            data = json.load(fh)
+    except Exception:
+        raise HTTPException(422, '产物不是合法 JSON')
+    return JSONResponse(_rewrite_base(data, _request_origin(request)),
+                        headers={'cache-control': 'no-cache, must-revalidate',
+                                 'access-control-allow-origin': '*'})
+
+
+def _lan_ips():
+    out = []
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = info[4][0]
+            if ip.startswith('127.') or ip.startswith('169.254.') or ip in out:
+                continue
+            out.append(ip)
+    except Exception:
+        pass
+    if not out:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(('8.8.8.8', 80))
+            out.append(s.getsockname()[0])
+            s.close()
+        except Exception:
+            pass
+    return out
+
+
 @app.middleware('http')
 async def guard(request: Request, call_next):
-    if request.url.path == '/api/health':
+    path = request.url.path
+    if path == '/api/health':
+        return await call_next(request)
+    # 订阅/聚合路径供电视端直接访问，不走后台登录；后台 / 与 /api/* 仍受保护
+    if path in ('/fongmi.json', '/movie', '/other', '/adult', '/preview') or (
+            path.endswith('.json') and not path.startswith('/api/')):
         return await call_next(request)
     client = request.client.host if request.client else ''
     # 走隧道进来的请求一定带 CF/XFF 头：即便源地址看着是回环也强制认证，
@@ -136,29 +227,47 @@ def health():
 
 
 @app.get('/api/dashboard')
-def dashboard():
+def dashboard(request: Request):
     def cnt(f, key='sites'):
         d = jload(os.path.join(DIST2, f), {})
         return len(d.get(key) or [])
-    clean = jload(os.path.join(DIST2, 'clean.json'), {})
-    lives = clean.get('lives') or []
-    groups = lives[0].get('groups') if lives else []
+    defs = jload(ART_FILE, {'artifacts': []})
+    art_files = [a.get('file') or (a.get('id') + '.json')
+                 for a in (defs.get('artifacts') or []) if a.get('enabled', True)]
+    if not art_files:
+        art_files = ['two.json']
+    # 直播信息从任一含 lives 的产物里取（产物文件名可自定义，不再写死 clean.json）
+    lives = []
+    for f in art_files + ['two.json']:
+        d = jload(os.path.join(DIST2, f), {})
+        if d.get('lives'):
+            lives = d['lives']
+            break
+    groups = (lives[0].get('groups') or []) if lives else []
     last = run_state(run_dirs()[0]) if run_dirs() else None
     agg = jload(os.path.join(DIST2, 'agg_srcs.json'), {})
     cats = [(b.get('name'), len(b.get('srcs') or [])) for b in (agg.get('other', {}).get('buckets') or [])]
     mtimes = {}
-    for f in ('clean.json', 'full.json', 'basic.json', 'multi.json', 'two.json'):
+    for f in art_files + ['two.json', 'multi.json']:
         p = os.path.join(DIST2, f)
         mtimes[f] = datetime.datetime.fromtimestamp(os.path.getmtime(p)).strftime('%m-%d %H:%M') if os.path.exists(p) else None
+    port = int(os.environ.get('ADMIN_PORT', '8123') or 8123)
+    origin = _request_origin(request)
+    urls = [origin + '/fongmi.json']
+    for ip in ['127.0.0.1'] + [ip for ip in _lan_ips() if ip != '127.0.0.1']:
+        u = 'http://%s:%s/fongmi.json' % (ip, port)
+        if u not in urls:
+            urls.append(u)
     return {
-        'artifacts': {'clean': cnt('clean.json'), 'full': cnt('full.json'),
-                      'basic': cnt('basic.json'), 'multi': cnt('multi.json', 'urls'),
-                      'two': cnt('two.json')},
+        'artifacts': {f: cnt(f) for f in art_files},
+        'multi': cnt('multi.json', 'urls'),
         'lives': {'groups': len(groups), 'channels': sum(len(g.get('channel') or []) for g in groups)},
         'categories': cats,
         'built_at': mtimes,
         'last_run': last,
         'public': probe_public(),
+        'public_base': PUBLIC,
+        'local_urls': urls,
     }
 
 
@@ -182,16 +291,23 @@ MANUAL = os.environ.get('FONGMI_MANUAL') or os.path.join(REPO, 'config', 'manual
 INTL = os.path.join(REPO, 'config', 'intl_channels.json')
 
 
+def _manual_path():
+    p = Path(MANUAL)
+    if not p.is_absolute():
+        p = Path(REPO, p)
+    p = p.resolve()
+    if p.parent != Path(REPO, 'config').resolve() or p.suffix != '.json':
+        raise HTTPException(500, 'MANUAL 路径非法')
+    return p
+
+
 def _read_manual():
-    return jload(MANUAL, {'vod': [], 'live': [], 'intl': []})
+    return jload(str(_manual_path()), {'vod': [], 'live': [], 'intl': []})
 
 
 def _write_manual(cfg, reason):
     """回写 JSON + 尽力 git commit（失败不影响保存）"""
-    tmp = MANUAL + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as fh:
-        json.dump(cfg, fh, ensure_ascii=False, indent=1)
-    shutil.move(tmp, MANUAL)
+    _manual_path().write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding='utf-8')
     try:
         subprocess.run(['git', 'add', 'config/manual_sources.json'], cwd=REPO,
                        capture_output=True, timeout=20)
@@ -333,14 +449,26 @@ async def start_run(request: Request):
         body = await request.json()
     except Exception:
         pass
-    steps = body.get('steps') or ['01_fetch', '02_probe', '03_dedupe', '04_classify',
-                                  '05_verify', '06_search', '07_build', '08_deploy']
     deploy = bool(body.get('deploy'))
     skip_probe = bool(body.get('skip_probe'))
     if skip_probe:
-        steps = [s for s in steps if s not in ('02_probe', '05_verify', '06_search')]
-    if not deploy:
-        steps = [s for s in steps if s != '08_deploy']
+        # 只生成：复用上次测活结果直接重建产物，不再拉源/测活
+        need = [os.path.join(REPO, 'state', 'ok_api_final.json')]
+        pool = os.path.join(REPO, 'state', 'sites_verified_pool.json')
+        missing = [p for p in need if not os.path.isfile(p)]
+        if not os.path.isfile(pool) and not all(
+                os.path.isfile(os.path.join(REPO, 'state', f))
+                for f in ('sites_clean.json', 'verify_result.json')):
+            missing.append(pool)
+        if missing:
+            raise HTTPException(400, '没有可复用的测活结果：' + '、'.join(
+                os.path.relpath(p, REPO) for p in missing) + '。先跑一次「一键全流程」。')
+        steps = ['07_build'] + (['08_deploy'] if deploy else [])
+    else:
+        steps = body.get('steps') or ['01_fetch', '02_probe', '03_dedupe', '04_classify',
+                                      '05_verify', '06_search', '07_build', '08_deploy']
+        if not deploy:
+            steps = [s for s in steps if s != '08_deploy']
 
     # 并发保护：已有 running 且进程还在，拒绝
     for r in run_dirs()[:3]:
@@ -349,20 +477,22 @@ async def start_run(request: Request):
             raise HTTPException(409, f'已有运行中的任务 {r}')
 
     run_id = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    os.makedirs(os.path.join(RUNS, run_id), exist_ok=True)
-    logp = os.path.join(RUNS, run_id, 'driver.log')
+    if not re.fullmatch(r'\d{8}-\d{6}', run_id):
+        raise HTTPException(500, 'run_id 生成异常')
+    rd = Path(RUNS, run_id)
+    rd.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     env['STEP08_DEPLOY'] = '1' if deploy else '0'
+    if skip_probe:
+        env['STEP07_MULTI'] = '0'   # 只生成：跳过慢的 75 个上游配置探测
     cmd = [PY, PIPELINE, '--run-id', run_id, '--steps', ','.join(steps)]
-    with open(logp, 'w') as fh:
-        p = subprocess.Popen(cmd, cwd=REPO, env=env, stdout=fh,
-                             stderr=subprocess.STDOUT, start_new_session=True)
+    p = subprocess.Popen(cmd, cwd=REPO, env=env, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
     st = {'run_id': run_id, 'status': 'running', 'pid': p.pid,
           'started': datetime.datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S'),
           'steps': [{'step': s, 'rc': None} for s in steps], 'counters': {},
           'requested': {'deploy': deploy, 'skip_probe': skip_probe, 'steps': steps}}
-    with open(os.path.join(RUNS, run_id, 'run.json'), 'w', encoding='utf-8') as fh:
-        json.dump(st, fh, ensure_ascii=False, indent=1)
+    Path(rd, 'run.json').write_text(json.dumps(st, ensure_ascii=False, indent=1), encoding='utf-8')
     return {'run_id': run_id, 'pid': p.pid, 'steps': steps, 'deploy': deploy}
 
 
@@ -423,6 +553,17 @@ def artifact_preview(fname: str, n: int = 20):
 # ---------- 产物定义（可自定义） ----------
 ART_FILE = os.path.join(REPO, 'config', 'artifacts.json')
 VALID_POOLS = ('clean', 'full')
+VALID_TYPES = ('list', 'agg_movie', 'agg_adult')
+
+
+def _artifact_types(a):
+    """产物类型数组。新格式 types；旧格式 type/group 自动兼容。"""
+    t = a.get('types')
+    if isinstance(t, list):
+        return [x for x in t if x in VALID_TYPES]
+    if a.get('type') == 'agg':
+        return ['agg_adult' if (a.get('group') or 'movie') == 'adult' else 'agg_movie']
+    return ['list']
 
 
 GROUP_LABEL = {'other': '影视资源组', 'adult': '成人组'}
@@ -457,9 +598,14 @@ def _bucket_names():
 @app.get('/api/artifact-defs')
 def get_artifact_defs():
     cfg = jload(ART_FILE, {'artifacts': []})
-    return {'artifacts': cfg.get('artifacts') or [], 'buckets': _bucket_names(),
-            'groups': _bucket_groups(), 'pools': list(VALID_POOLS),
-            'note': 'pool=clean 三层全通池 / full 全量池；buckets=all 表示不限制分类'}
+    arts = []
+    for a in (cfg.get('artifacts') or []):
+        a = dict(a)
+        a['types'] = _artifact_types(a)
+        arts.append(a)
+    return {'artifacts': arts, 'buckets': _bucket_names(),
+            'groups': _bucket_groups(), 'pools': list(VALID_POOLS), 'types': list(VALID_TYPES),
+            'note': 'types 可多选；pool/include_js/lives/buckets 仍保存在文件里继续生效'}
 
 
 @app.post('/api/artifact-defs')
@@ -476,37 +622,51 @@ async def save_artifact_defs(request: Request):
             errs.append(f'产物 id「{i}」重复')
         ids.add(i)
         f = a.get('file') or ''
-        if not f.endswith('.json'):
-            errs.append(f'产物「{i}」的文件名必须 .json 结尾')
+        if not f.endswith('.json') or os.path.basename(f) != f:
+            errs.append(f'产物「{i}」的文件名必须是纯文件名且 .json 结尾')
         if f in files:
             errs.append(f'文件名「{f}」重复')
         files.add(f)
-        typ = a.get('type') or 'list'
-        if typ not in ('list', 'agg'):
-            errs.append(f'产物「{i}」的 type 只能是 list（直连站列表）或 agg（聚合站）')
-        if typ == 'agg' and (a.get('group') or 'movie') not in ('movie', 'adult'):
-            errs.append(f'产物「{i}」的 group 只能是 movie/adult')
-        if typ == 'list' and a.get('pool') not in VALID_POOLS:
+
+        # types 多选：空数组视为“一个都没选”，不能再回退到旧 type/group
+        types = _artifact_types(a)
+        if not types:
+            errs.append(f'产物「{i}」至少要选一种类型')
+        a['types'] = types
+        agg_types = [t for t in types if t.startswith('agg_')]
+        if types == ['list']:
+            a['type'] = 'list'
+            a.pop('group', None)
+        elif agg_types:
+            a['type'] = 'agg'
+            a['group'] = agg_types[0].split('_', 1)[1]
+
+        # 界面已隐藏这些设置，但已有值必须保留；新建产物给默认值
+        a.setdefault('pool', 'clean')
+        if 'list' in types and a.get('pool') not in VALID_POOLS:
             errs.append(f'产物「{i}」的 pool 只能是 clean/full')
+        a.setdefault('include_js', True)
+        a.setdefault('lives', True)
+        a.setdefault('buckets', 'all')
+        a.setdefault('enabled', True)
+
         b = a.get('buckets')
         if b != 'all':
             if not isinstance(b, list):
                 errs.append(f'产物「{i}」的 buckets 必须是 all 或分类数组')
             else:
-                allowed = _buckets_for(ART_GROUP.get(a.get('group') or 'movie', 'other'))
+                allowed = set()
+                for g in _bucket_groups():
+                    allowed.update(g['buckets'])
                 unknown = [x for x in b if x not in allowed]
                 if unknown:
                     errs.append(f'产物「{i}」含未知分类：{unknown}（分类以「分类」tab 为准）')
-        for k in ('clip', 'file'):
-            if '..' in str(a.get(k) or ''):
-                errs.append(f'产物「{i}」的 {k} 含非法路径')
+        if '..' in str(a.get('clip') or ''):
+            errs.append(f'产物「{i}」的 clip 含非法路径')
     if errs:
         raise HTTPException(400, '；'.join(errs[:6]))
-    payload = {'note': 'GUI 可编辑；改完重跑 07 生成生效', 'artifacts': arts}
-    tmp = ART_FILE + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as fh:
-        json.dump(payload, fh, ensure_ascii=False, indent=1)
-    shutil.move(tmp, ART_FILE)
+    payload = {'note': 'GUI 可编辑；类型可多选；改完重跑 07 生成生效', 'artifacts': arts}
+    Path(ART_FILE).write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding='utf-8')
     try:
         subprocess.run(['git', 'add', 'config/artifacts.json'], cwd=REPO, capture_output=True, timeout=20)
         subprocess.run(['git', '-c', 'user.name=fongmi-admin', '-c', 'user.email=admin@local',
@@ -554,9 +714,10 @@ def restore_snapshot(sid: str):
         if os.path.isfile(cur):
             shutil.copy2(cur, os.path.join(dst, f))
             saved[f] = {'bytes': os.path.getsize(cur)}
-    with open(os.path.join(dst, 'meta.json'), 'w', encoding='utf-8') as fh:
-        json.dump({'id': pre, 'created': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                   'run_id': 'pre-restore', 'files': saved}, fh, ensure_ascii=False, indent=1)
+    Path(dst, 'meta.json').write_text(
+        json.dumps({'id': pre, 'created': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'run_id': 'pre-restore', 'files': saved}, ensure_ascii=False, indent=1),
+        encoding='utf-8')
     # 还原
     restored = []
     for f in (meta.get('files') or {}):
@@ -629,8 +790,7 @@ async def save_categories(request: Request):
     if e:
         raise HTTPException(400, '；'.join(e[:5]))
     shutil.copyfile(CATEGORIES, CATEGORIES + '.bak')
-    with open(CATEGORIES, 'w', encoding='utf-8') as fh:
-        json.dump(cfg, fh, ensure_ascii=False, indent=1)
+    Path(CATEGORIES).write_text(json.dumps(cfg, ensure_ascii=False, indent=1), encoding='utf-8')
     try:
         subprocess.run(['git', 'add', 'config/categories.json'], cwd=REPO, capture_output=True, timeout=20)
         subprocess.run(['git', '-c', 'user.name=fongmi-admin', '-c', 'user.email=admin@local',
@@ -638,6 +798,83 @@ async def save_categories(request: Request):
     except Exception:
         pass
     return {'ok': True, 'warnings': w, 'note': '配置已保存；下次 07_build 生效'}
+
+
+# ---------- 本机订阅 / 聚合 ----------
+# 同一份 dist2：/fongmi.json、/movie.json 等直接给 FongMi 订阅；
+# /movie、/adult 是本机聚合接口，协议与 deploy/_worker.js 一致。
+@app.get('/fongmi.json')
+def local_fongmi(request: Request):
+    mode = (request.query_params.get('mode') or 'two').lower()
+    fname = LOCAL_MODE_MAP.get(mode)
+    if not fname:
+        return JSONResponse({'error': 'unknown mode', 'mode': mode}, status_code=404)
+    return _artifact_json(fname, request)
+
+
+@app.get('/{fname}.json')
+def local_artifact(fname: str, request: Request):
+    # 路由模板是 /{fname}.json，fname 拿到的是不带后缀的 movie
+    return _artifact_json(fname + '.json', request)
+
+
+def _agg(group_name, request):
+    g = aggregate.load_group(group_name)
+    if not g:
+        return JSONResponse({'list': [], 'error': 'agg_srcs.json 缺失'}, status_code=500)
+    g = aggregate.scope_by_artifact(g, request.query_params.get('m'))
+    accept = request.headers.get('accept') or ''
+    ac = (request.query_params.get('ac') or '').lower()
+    wd = request.query_params.get('wd')
+    if not ac and not wd and 'text/html' in accept:
+        return RedirectResponse('/preview?g=' + group_name, status_code=302)
+    ids = request.query_params.get('ids') or ''
+    t = request.query_params.get('t')
+    try:
+        pg = max(1, int(request.query_params.get('pg') or 1))
+    except (TypeError, ValueError):
+        pg = 1
+    if wd:
+        body = aggregate.handle_search(g, wd, pg)
+    elif ids:
+        body = aggregate.handle_detail(g, ids)
+    elif t:
+        body = aggregate.handle_category(g, t, pg, bool(request.query_params.get('debug')))
+    else:
+        body = aggregate.handle_list(g)
+    return JSONResponse(body, headers={'cache-control': 'public, max-age=300',
+                                       'access-control-allow-origin': '*'})
+
+
+@app.get('/movie')
+@app.get('/other')
+def agg_movie(request: Request):
+    return _agg('other', request)
+
+
+@app.get('/adult')
+def agg_adult(request: Request):
+    return _agg('adult', request)
+
+
+@app.get('/preview')
+def agg_preview(request: Request):
+    group_name = 'adult' if request.query_params.get('g') == 'adult' else 'other'
+    g = aggregate.load_group(group_name)
+    if not g:
+        return HTMLResponse('agg_srcs.json 缺失', status_code=500)
+    cat = request.query_params.get('t') or '全部'
+    body = aggregate.handle_category(g, cat, 1)
+    srcs = aggregate.unique_srcs(g)
+    items = []
+    for x in (body.get('list') or []):
+        try:
+            idx = int(str(x.get('vod_id')).split('|')[0][1:])
+        except Exception:
+            idx = -1
+        items.append({**x, '_src': srcs[idx].get('name') if 0 <= idx < len(srcs) else ''})
+    return HTMLResponse(aggregate.preview_html(group_name, g, cat, items, len(srcs)),
+                        headers={'cache-control': 'public, max-age=120'})
 
 
 # ---------- 静态页 ----------

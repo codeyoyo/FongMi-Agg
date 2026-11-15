@@ -6,6 +6,8 @@
 """
 import json, os, re, sys, urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+import safe_http
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
@@ -17,7 +19,7 @@ def get_classes(site):
     url = api + sep + ('ac=list&at=xml' if typ == 0 else 'ac=list')
     try:
         req = urllib.request.Request(url, headers=UA)
-        with urllib.request.urlopen(req, timeout=12) as r:
+        with safe_http.open_request(req, timeout=12) as r:
             body = r.read(200000).decode('utf-8', 'ignore')
     except Exception as e:
         return {**site, '_classes': [], '_cerr': type(e).__name__}
@@ -52,8 +54,8 @@ def main():
 
     with ThreadPoolExecutor(max_workers=8) as ex:
         out = list(ex.map(get_classes, pool))
-    json.dump(out, open(os.path.join(BASE, 'state', 'classes_all.json'), 'w'),
-              ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'classes_all.json')).write_text(
+        json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
     ok = [x for x in out if x.get('_classes')]
     print(f'{len(ok)}/{len(out)} 拿到分类名')
     for x in out[:8]:

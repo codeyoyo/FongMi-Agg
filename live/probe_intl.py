@@ -7,6 +7,7 @@
 安全阀：本次存活数 < MIN_KEEP 时不动原文件——防止一次网络故障把整组清空。
 """
 import json, os, sys, time, concurrent.futures as cf
+from pathlib import Path
 from test_live_routes import check
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -41,5 +42,5 @@ if __name__ == '__main__':
         print(f'⚠ 存活 {len(alive)} < {MIN_KEEP}，疑似网络故障，保留原文件不动')
         sys.exit(0)
 
-    json.dump(alive, open(PATH, 'w'), ensure_ascii=False, indent=1)
+    Path(PATH).write_text(json.dumps(alive, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f'已写回 {len(alive)} 条')

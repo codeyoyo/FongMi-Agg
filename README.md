@@ -202,12 +202,26 @@ bash scripts/daily_clbug.sh
 
 抽样 20 条是启发式，可能漏网或误杀。发现不对的站，加进黑名单再跑。
 
+## 两种订阅方式（同一份 `dist2/`）
+
+产物只生成一份，本机服务和 Cloudflare 都能直接用：
+
+| 方式 | 地址 | 说明 |
+|---|---|---|
+| **本机直供** | `http://<本机IP>:8123/fongmi.json` | 管理台本身就是订阅服务：静态产物 + `/movie`、`/adult` 聚合接口。返回配置时会把聚合站地址改写成当前访问地址（`127.0.0.1` / 局域网 IP / 隧道域名都行），同一份文件不用重新生成。默认监听 `0.0.0.0`，电视/手机可直接访问；只想本机用设 `ADMIN_HOST=127.0.0.1`。 |
+| **Cloudflare Pages** | `https://fm.le138.de5.net/fongmi.json` | 现有 `deploy/_worker.js` + `scripts/deploy_pages.sh`，在「运行」里勾选发布或手动执行。 |
+
+- 本机入口：`/fongmi.json`（默认 `two.json`）、`/movie.json`、`/full.json`；
+- 本机聚合：`/movie`（影视，`/other` 兼容旧入口）、`/adult`（成人），请求形态与 Cloudflare 完全一致；
+- 后台 `/` 与 `/api/*` 对非本机请求仍要登录；订阅/聚合路径是公开的；
+- 本机 Python 聚合实现（`webui/app/aggregate.py`）与 `deploy/_worker.js` 协议一致，**改协议要同步改两处**。
+
 ## 部署形态：Pages + `_worker.js`（advanced mode）
 
 静态托管本身无法按 URL 参数返回不同内容。`deploy/_worker.js` 放进发布根目录后，Pages 会用它接管所有请求：
 
 ```js
-const target = url.searchParams.get('mode') === 'full' ? '/full.json' : '/clean.json';
+const target = url.searchParams.get('mode') === 'full' ? '/full.json' : '/two.json';
 return env.ASSETS.fetch(new URL(target, url.origin));
 ```
 

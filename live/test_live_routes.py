@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """对指定频道的所有线路做真实可达性测试，输出可用线路排序"""
-import json, re, ssl, sys, time, urllib.request, concurrent.futures as cf
+import json, os, re, ssl, sys, time, urllib.request, concurrent.futures as cf
+from pathlib import Path
 from urllib.parse import urljoin
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 CTX = ssl.create_default_context(); CTX.check_hostname = False; CTX.verify_mode = ssl.CERT_NONE
 
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
+
 
 def fetch(url, timeout=8, limit=120_000):
     req = urllib.request.Request(url, headers=UA)
     t0 = time.time()
-    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+    with safe_http.open_request(req, timeout=timeout, context=CTX) as r:
         data = r.read(limit)
     return data, int((time.time() - t0) * 1000)
 
@@ -84,4 +89,5 @@ if __name__ == '__main__':
         for r, ms, note in good[:5]:
             print(f'    {ms:>5}ms {note:<10} [{r["src"][:14]}] {r["url"][:66]}')
         print()
-    json.dump(out, open('/app/working/fongmi-agg/state/live_tested_core.json', 'w'), ensure_ascii=False, indent=1)
+    Path(BASE, 'state', 'live_tested_core.json').write_text(
+        json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')

@@ -6,4 +6,7 @@ REPO="$(pwd)"
 counters() {  # counters '{"k":1}'
   echo "##COUNTERS## $1"
 }
-PY=python3
+PY="${FONGMI_PY:-python3}"
+# Windows 原生 Python 不认识 Git Bash 的 /tmp，统一用仓库内的临时目录
+TMP="state/tmp"
+mkdir -p "$TMP"

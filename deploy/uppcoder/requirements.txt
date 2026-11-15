@@ -1,0 +1,4 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+
+# 本项目不用 PostgreSQL；平台若强制注入 DATABASE_URL，应用会忽略。

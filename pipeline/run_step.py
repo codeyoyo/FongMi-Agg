@@ -20,7 +20,8 @@
      20  网络类失败，可重试
      30  硬失败，需人工
 """
-import argparse, json, os, subprocess, sys, time, datetime
+import argparse, json, os, re, subprocess, sys, time, datetime
+from pathlib import Path
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STEPS_DIR = os.path.join(BASE, 'scripts', 'steps')
@@ -60,7 +61,7 @@ def snapshot(run_id, tag='build'):
             if not os.path.isfile(src):
                 continue
             shutil.copy2(src, os.path.join(dst, f))
-            raw = open(src, 'rb').read()
+            raw = Path(src).read_bytes()
             try:
                 d = json.loads(raw)
                 n = len(d.get('urls') or d.get('sites') or d) if isinstance(d, (dict, list)) else None
@@ -68,8 +69,8 @@ def snapshot(run_id, tag='build'):
                 n = None
             meta['files'][f] = {'bytes': len(raw), 'count': n,
                                 'sha256': hashlib.sha256(raw).hexdigest()[:16]}
-        with open(os.path.join(dst, 'meta.json'), 'w', encoding='utf-8') as fh:
-            json.dump(meta, fh, ensure_ascii=False, indent=1)
+        Path(dst, 'meta.json').write_text(
+            json.dumps(meta, ensure_ascii=False, indent=1), encoding='utf-8')
         keep = 20
         olds = sorted(d for d in os.listdir(SNAPS) if os.path.isdir(os.path.join(SNAPS, d)))
         for d in olds[:-keep]:
@@ -82,6 +83,10 @@ def snapshot(run_id, tag='build'):
 
 
 def run_one(run_id, step, extra_env=None):
+    if not re.fullmatch(r'[A-Za-z0-9._-]+', str(run_id)):
+        raise SystemExit('!! 非法 run_id')
+    if not re.fullmatch(r'[A-Za-z0-9_]+', str(step)):
+        raise SystemExit('!! 非法 step')
     rd = os.path.join(RUNS, run_id)
     os.makedirs(rd, exist_ok=True)
     logf = os.path.join(rd, step + '.log')
@@ -91,13 +96,14 @@ def run_one(run_id, step, extra_env=None):
 
     env = dict(os.environ)
     env.setdefault('PYTHONUNBUFFERED', '1')
+    env.setdefault('PYTHONIOENCODING', 'utf-8')
     if extra_env:
         env.update(extra_env)
 
     t0 = time.time()
     started = now()
     counters, rc = {}, 0
-    with open(logf, 'w', encoding='utf-8') as fh:
+    with Path(logf).open('w', encoding='utf-8') as fh:
         p = subprocess.Popen(['bash', step_path(step)], cwd=BASE, env=env,
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                              text=True, bufsize=1)
@@ -118,15 +124,13 @@ def run_one(run_id, step, extra_env=None):
            'duration_ms': int((time.time() - t0) * 1000),
            'counters': counters,
            'class': 'ok' if rc == 0 else 'noop' if rc == 10 else 'retryable' if rc == 20 else 'hard'}
-    with open(jsf, 'w', encoding='utf-8') as fh:
-        json.dump(rec, fh, ensure_ascii=False, indent=1)
+    Path(jsf).write_text(json.dumps(rec, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f"\n=== {step} rc={rc} ({rec['class']}) {rec['duration_ms']}ms {counters}")
     if step == '07_build' and rc == 0:
         sid = snapshot(run_id, tag='build')
         if sid:
             rec['snapshot'] = sid
-            with open(jsf, 'w', encoding='utf-8') as fh:
-                json.dump(rec, fh, ensure_ascii=False, indent=1)
+            Path(jsf).write_text(json.dumps(rec, ensure_ascii=False, indent=1), encoding='utf-8')
     return rec
 
 
@@ -147,7 +151,7 @@ def run_pipeline(run_id, steps, extra_env=None):
             summary['steps'].append(rec2)
             summary['counters'].update(rec2['counters'])
             rec = rec2
-        if rec['class'] == 'hard':
+        if rec['class'] not in ('ok', 'noop'):
             summary['status'] = 'failed'
             break
     else:
@@ -160,8 +164,7 @@ def run_pipeline(run_id, steps, extra_env=None):
 
 
 def _write(path, obj):
-    with open(path, 'w', encoding='utf-8') as fh:
-        json.dump(obj, fh, ensure_ascii=False, indent=1)
+    Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=1), encoding='utf-8')
 
 
 def main():

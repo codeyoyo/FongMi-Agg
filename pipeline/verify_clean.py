@@ -9,6 +9,8 @@
 只打印层级结果与耗时，不输出影片标题。
 """
 import concurrent.futures as cf, json, re, sys, urllib.request, time
+from pathlib import Path
+import safe_http
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 
@@ -20,7 +22,7 @@ def get(url, timeout=12, retries=2):
     for i in range(retries + 1):
         t0 = time.time()
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
+            with safe_http.open_request(req, timeout=timeout) as r:
                 return r.status, r.read(3000000).decode('utf-8', 'ignore'), (time.time() - t0) * 1000
         except Exception as e:
             last = e
@@ -111,7 +113,8 @@ def main():
         for r in dead[:10]:
             print(f"  {r['_total']:>8} 部  L1={r['L1']} L2={r['L2']}  {r['name'][:22]}  {r.get('err','')}")
 
-    json.dump(res, open('state/verify_result.json', 'w'), ensure_ascii=False, indent=1)
+    Path('state/verify_result.json').write_text(
+        json.dumps(res, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f"\n三层全通合计片库 ≈ {sum(r['_total'] for r in full):,} 部")
 
 

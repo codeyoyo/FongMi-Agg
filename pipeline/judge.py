@@ -10,6 +10,8 @@
 应从 </list><class>…</class> 段里取 <ty> 文本，而不是全文正则。
 """
 import json, os, re, urllib.request
+from pathlib import Path
+import safe_http
 from concurrent.futures import ThreadPoolExecutor
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,7 +37,7 @@ def get_classes(site):
     url = api + sep + ('ac=list&at=xml' if typ == 0 else 'ac=list')
     try:
         req = urllib.request.Request(url, headers=UA)
-        with urllib.request.urlopen(req, timeout=12) as r:
+        with safe_http.open_request(req, timeout=12) as r:
             body = r.read(300000).decode('utf-8', 'ignore')
     except Exception as e:
         return {**site, '_classes': [], '_cerr': type(e).__name__}
@@ -85,7 +87,11 @@ def main():
             continue
         seen.add(k)
         pool.append(x)
-    for s in json.load(open(os.path.join(BASE, 'debug', 'clbug_clean.json'))):
+    try:
+        clbug = json.load(open(os.path.join(BASE, 'debug', 'clbug_clean.json')))
+    except FileNotFoundError:
+        clbug = []
+    for s in clbug:
         k = h(s['api'])
         if k in seen:
             continue
@@ -102,7 +108,8 @@ def main():
         flag = 'ADULT' if r['_kind'] == 'adult' else 'clean'
         print(f"  {flag:<6} legit={r.get('_legit_hits')} n={len(r.get('_classes') or [])} "
               f"{str(r['name'])[:18]} {r.get('_cerr', '')}")
-    json.dump(rows, open(os.path.join(BASE, 'state', 'kinds2.json'), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'kinds2.json')).write_text(
+        json.dumps(rows, ensure_ascii=False, indent=1), encoding='utf-8')
     print('→ kinds2.json')
 
 

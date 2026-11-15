@@ -9,7 +9,11 @@
 """
 import argparse, hashlib, json, mimetypes, os, sys, urllib.error, urllib.request
 import uuid
+from pathlib import Path
 
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 API = 'https://api.cloudflare.com/client/v4'
 
 
@@ -21,7 +25,7 @@ def call(method, path, token, body=None, ctype='application/json', raw=None):
     if data is not None:
         req.add_header('Content-Type', ctype)
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with safe_http.open_request(req, timeout=60) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         return json.loads(e.read())
@@ -45,7 +49,7 @@ def deploy(token, acct, name, directory):
         for fn in names:
             full = os.path.join(root, fn)
             rel = '/' + os.path.relpath(full, directory).replace(os.sep, '/')
-            blob = open(full, 'rb').read()
+            blob = Path(full).read_bytes()
             manifest[rel] = {'hash': hashlib.sha256(blob).hexdigest(), 'size': len(blob)}
             files.append((rel, blob))
 

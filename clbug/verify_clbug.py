@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """clbug 池：成人过滤 + 片库去重 + 三层验证"""
-import json, re, ssl, urllib.request, concurrent.futures as cf
+import json, os, re, ssl, sys, urllib.request, concurrent.futures as cf
+from pathlib import Path
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12)'}
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE, 'pipeline'))
+import safe_http  # noqa: E402
 
 ADULT_WORDS = ['🔞', '麻豆', '番号', '黑料', '色南国', '美少女', '91精品', '91麻豆',
                '成人', '情色', '涩', '无码', 'AV', '必看', 'av视频']
@@ -13,7 +18,7 @@ ADULT_WORDS = ['🔞', '麻豆', '番号', '黑料', '色南国', '美少女', '
 
 def get(url, timeout=15):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+    with safe_http.open_request(req, timeout=timeout, context=CTX) as r:
         return r.read(800000).decode('utf-8', 'ignore')
 
 
@@ -164,4 +169,5 @@ if __name__ == '__main__':
     for r in bad:
         print(f"  {r['name'][:24]:26} {r['reason']}")
 
-    json.dump(good, open('/app/working/fongmi-agg/debug/clbug_clean.json', 'w'), ensure_ascii=False, indent=1)
+    Path(BASE, 'debug', 'clbug_clean.json').write_text(
+        json.dumps(good, ensure_ascii=False, indent=1), encoding='utf-8')

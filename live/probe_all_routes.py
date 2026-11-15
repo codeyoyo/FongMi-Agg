@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """批量实测 live_merged 里所有打包频道的线路，输出「每频道可用线路」表"""
 import json, os, sys, time, concurrent.futures as cf
+from pathlib import Path
 from test_live_routes import check
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -67,10 +68,11 @@ if __name__ == '__main__':
         if done % 5 == 0 or done == len(todo):
             alive = sum(1 for x in out.values() if x['good'])
             print(f'  {done}/{len(todo)}  累计可用 {alive} 个  {time.time()-t0:.0f}s', flush=True)
-            json.dump(out, open(os.path.join(BASE, 'state', 'live_route_test_all.json'), 'w'),
-                      ensure_ascii=False, indent=1)
+            Path(os.path.join(BASE, 'state', 'live_route_test_all.json')).write_text(
+                json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
 
-    json.dump(out, open(os.path.join(BASE, 'state', 'live_route_test_all.json'), 'w'), ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'state', 'live_route_test_all.json')).write_text(
+        json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
     dead = [k for k, v in out.items() if not v['good']]
     print(f'\n本轮完成 {len(todo)}，累计 {len(out)} 频道，可用 {len(out)-len(dead)}，全死 {len(dead)}，耗时 {time.time()-t0:.0f}s')
     if dead:

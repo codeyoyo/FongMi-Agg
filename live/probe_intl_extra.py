@@ -5,6 +5,7 @@
 港澳台走 hktw 那条链路，不在这里重复。
 """
 import json, os, sys
+from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from test_live_routes import check
 import concurrent.futures as cf
@@ -32,8 +33,8 @@ def main():
         res = list(ex.map(one, src))
     good = [dict(x, ms=ms) for x, ok, ms in res if ok]
     print(f'可播 {len(good)}/{len(src)}')
-    json.dump(good, open(os.path.join(BASE, 'intl_extra.json'), 'w'),
-              ensure_ascii=False, indent=1)
+    Path(os.path.join(BASE, 'intl_extra.json')).write_text(
+        json.dumps(good, ensure_ascii=False, indent=1), encoding='utf-8')
 
 
 if __name__ == '__main__':

@@ -8,13 +8,15 @@
 """
 import concurrent.futures as cf, json, re, sys, time
 import urllib.request, urllib.error
+from pathlib import Path
+import safe_http
 
 UA = {'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36'}
 
 
 def fetch(url, timeout=12, limit=400000):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with safe_http.open_request(req, timeout=timeout) as r:
         return r.status, r.read(limit)
 
 
@@ -74,7 +76,8 @@ def main():
 
     total = sum(r.get('_total', 0) for r in ok)
     print(f'\n合计片库 ≈ {total:,} 部')
-    json.dump(ok, open('state/ok_api.json', 'w'), ensure_ascii=False, indent=1)
+    Path('state/ok_api.json').write_text(
+        json.dumps(ok, ensure_ascii=False, indent=1), encoding='utf-8')
 
 
 if __name__ == '__main__':

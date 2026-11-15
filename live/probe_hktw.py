@@ -5,6 +5,7 @@
 build_live_config.py 会在第二轮据此收紧港澳台分组的线路。
 """
 import json, os, sys, time, concurrent.futures as cf
+from pathlib import Path
 from test_live_routes import check
 from build_live_config import hk_base
 
@@ -71,9 +72,9 @@ if __name__ == '__main__':
         if i % 4 == 0 or i == len(todo):
             alive = sum(1 for v in out.values() if v['good'])
             print(f'  {i}/{len(todo)}  累计可播频道 {alive}  {time.time()-t0:.0f}s', flush=True)
-            json.dump(out, open(OUTP, 'w'), ensure_ascii=False, indent=1)
+            Path(OUTP).write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
 
-    json.dump(out, open(OUTP, 'w'), ensure_ascii=False, indent=1)
+    Path(OUTP).write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
     dead = [k for k, v in out.items() if not v['good']]
     print(f'\n完成 {len(out)} 频道，可播 {len(out)-len(dead)}，全死 {len(dead)}，耗时 {time.time()-t0:.0f}s')
     if dead:
