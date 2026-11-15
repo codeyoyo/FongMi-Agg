@@ -127,16 +127,26 @@ let PREVIEW = null;
 
 async function renderSrc(){
   const d = await api('/sources');
-  const tabs = [['vod','点播配置'],['live','直播源'],['intl','境外/港澳台']].map(([k,t]) =>
-    `<button data-k="${k}" class="${k===SRCKIND?'primary':''}">${t} <b>${d.counts[k]}</b></button>`).join('');
-  const rows = (d[SRCKIND]||[]).map(x => `<tr>
-      <td>${esc(x.name)}</td>
+  // 「境外/港澳台」不再单独一个 tab：并进「直播源」列表展示，数据仍分别存
+  // manual_sources.json 的 live 和 config/intl_channels.json。
+  const counts = {vod: d.counts.vod, live: d.counts.live + d.counts.intl};
+  const tabs = [['vod','点播配置'],['live','直播源']].map(([k,t]) =>
+    `<button data-k="${k}" class="${k===SRCKIND?'primary':''}">${t} <b>${counts[k]}</b></button>`).join('');
+  const items = SRCKIND === 'live'
+    ? [...(d.live || []), ...(d.intl || [])]
+    : (d[SRCKIND] || []);
+  const rows = items.map(x => `<tr>
+      <td>${x.kind === 'intl' ? '<span class="pill" style="margin-right:6px">境外</span>' : ''}${esc(x.name)}</td>
       <td><code>${esc(x.url)}</code></td>
       <td class="dim">${esc(x.src)}</td>
-      <td style="width:44px">${SRCKIND==='intl' ? '<span class="dim">—</span>'
+      <td style="width:44px">${x.kind === 'intl' ? '<span class="dim">—</span>'
         : `<a href="#" onclick="delSrc(${JSON.stringify(x.url)});return false" style="color:var(--bad)">删</a>`}</td>
     </tr>`).join('') || '<tr><td colspan="4" class="dim">空</td></tr>';
-  const importer = SRCKIND === 'intl' ? '<p class="dim">境外源请直接改 config/intl_channels.json（P2 再做图形化）。</p>' : `
+  const intlNote = SRCKIND === 'live' && d.counts.intl
+    ? `<p class="dim" style="margin-top:12px">境外/港澳台频道（${d.counts.intl} 条）已并入上面的「直播源」列表，只读；增删请直接改 config/intl_channels.json。</p>`
+    : '';
+  const importer = `
+    ${intlNote}
     <h3 style="font-size:14px;margin:18px 0 8px">批量加源（每行一个地址）</h3>
     <textarea id="ta" rows="5" style="width:100%;background:#0b0e12;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,monospace;font-size:12px"
       placeholder="https://example.com/tvbox.json&#10;https://example.com/another.json"></textarea>
